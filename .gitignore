@@ -2,3 +2,5 @@
 __pycache__/
 *.pyc
 windenv/
+data/raw/era5_downloads/
+*.nc
