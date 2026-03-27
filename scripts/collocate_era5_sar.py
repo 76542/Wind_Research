@@ -1,0 +1,130 @@
+"""
+collocate_era5_sar.py
+----------------------
+Matches ERA5 100m wind data to each SAR observation by:
+  1. Finding the nearest ERA5 grid point to each SAR location (spatial)
+  2. Matching the date (temporal - overpass hour already fixed at 07:00)
+
+Output: era5_collocated.csv — one ERA5 wind speed per SAR observation row,
+        ready to use as test/validation target for your neural network.
+
+Requirements:
+    pip install xarray netCDF4 scipy pandas numpy
+"""
+
+import os
+import xarray as xr
+import pandas as pd
+import numpy as np
+from pathlib import Path
+
+# ── Paths ─────────────────────────────────────────────────────────────────────
+
+BASE_DIR    = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SAR_FILE    = os.path.join(BASE_DIR, "data", "processed", "gujarat_sar_timeseries.csv")
+GRID_FILE   = os.path.join(BASE_DIR, "data", "raw", "gujarat_sampling_grid.csv")
+ERA5_DIR    = Path(os.path.join(BASE_DIR, "data", "raw", "era5_downloads"))
+OUTPUT_FILE = os.path.join(BASE_DIR, "data", "processed", "era5_collocated.csv")
+
+# ── Load SAR data + coordinates ───────────────────────────────────────────────
+
+print("Loading SAR timeseries...")
+sar = pd.read_csv(SAR_FILE, parse_dates=["timestamp"])
+
+print("Loading sampling grid (lat/lon per point)...")
+grid = pd.read_csv(GRID_FILE)[["point_id", "latitude", "longitude"]]
+sar = sar.merge(grid, on="point_id", how="left")
+
+missing_coords = sar["latitude"].isna().sum()
+if missing_coords > 0:
+    print(f"  WARNING: {missing_coords} rows have no coordinates — check grid file")
+
+print(f"SAR data: {len(sar):,} rows, {sar['point_id'].nunique()} unique points")
+
+# ── Load all ERA5 files ───────────────────────────────────────────────────────
+
+era5_files = sorted(ERA5_DIR.glob("era5_gujarat_100m_wind_*.nc"))
+print(f"\nFound {len(era5_files)} ERA5 files:")
+for f in era5_files:
+    print(f"  {f.name}")
+
+print("\nLoading ERA5 datasets...")
+ds = xr.open_mfdataset(era5_files, combine="by_coords")
+print(f"  ERA5 variables: {list(ds.data_vars)}")
+print(f"  ERA5 dimensions: {dict(ds.dims)}")
+
+# ERA5 variable names (u100/v100 or u100m/v100m depending on version)
+u_var = "u100" if "u100" in ds else "u100m"
+v_var = "v100" if "v100" in ds else "v100m"
+print(f"  Using wind variables: {u_var}, {v_var}")
+
+# Compute 100m wind speed
+ds["wind_speed_100m"] = np.sqrt(ds[u_var]**2 + ds[v_var]**2)
+
+# ERA5 grid arrays
+era5_lats = ds["latitude"].values
+era5_lons = ds["longitude"].values
+
+# Handle both 'time' and 'valid_time' dimension names
+time_dim = "valid_time" if "valid_time" in ds.dims else "time"
+era5_times = pd.to_datetime(ds[time_dim].values)
+
+print(f"  ERA5 grid: {len(era5_lats)} lats × {len(era5_lons)} lons, "
+      f"{len(era5_times)} timesteps")
+print(f"  ERA5 lat range: {era5_lats.min():.2f} – {era5_lats.max():.2f}")
+print(f"  ERA5 lon range: {era5_lons.min():.2f} – {era5_lons.max():.2f}")
+
+# ── Co-locate ─────────────────────────────────────────────────────────────────
+
+print("\nCo-locating ERA5 to SAR observations...")
+
+# Date → ERA5 time-index lookup
+era5_dates = {t.date(): i for i, t in enumerate(era5_times)}
+
+def nearest_idx(arr, val):
+    return int(np.argmin(np.abs(arr - val)))
+
+era5_ws  = []
+matched  = 0
+unmatched = 0
+
+for _, row in sar.iterrows():
+    obs_date = row["timestamp"].date()
+
+    if obs_date not in era5_dates:
+        era5_ws.append(np.nan)
+        unmatched += 1
+        continue
+
+    t_idx   = era5_dates[obs_date]
+    lat_idx = nearest_idx(era5_lats, row["latitude"])
+    lon_idx = nearest_idx(era5_lons, row["longitude"])
+
+    ws = float(
+        ds["wind_speed_100m"].isel(
+            **{time_dim: t_idx, "latitude": lat_idx, "longitude": lon_idx}
+        ).values
+    )
+
+    era5_ws.append(ws)
+    matched += 1
+
+    if matched % 5000 == 0:
+        print(f"  ...processed {matched:,} rows")
+
+sar["ERA5_WindSpeed_100m_ms"] = era5_ws
+
+print(f"\n  Matched:   {matched:,} observations")
+print(f"  Unmatched: {unmatched:,} observations (no ERA5 date found)")
+
+# ── Save output ───────────────────────────────────────────────────────────────
+
+sar_out = sar.dropna(subset=["ERA5_WindSpeed_100m_ms"]).copy()
+sar_out.to_csv(OUTPUT_FILE, index=False)
+
+print(f"\nSaved {len(sar_out):,} co-located rows → {OUTPUT_FILE}")
+print("\nColumn preview:")
+print(sar_out[["timestamp", "point_id", "latitude", "longitude",
+               "VV", "incidence_angle", "ERA5_WindSpeed_100m_ms"]].head(5).to_string())
+print("\nERA5 100m wind speed stats:")
+print(sar_out["ERA5_WindSpeed_100m_ms"].describe().round(3))

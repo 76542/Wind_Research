@@ -1,0 +1,8 @@
+.DS_Store
+__pycache__/
+*.pyc
+windenv/
+data/raw/era5_downloads/
+*.nc
+wind_env/
+models/*.pkl
