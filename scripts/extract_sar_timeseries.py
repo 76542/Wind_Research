@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from scripts import config
+from scripts.maharashtra import config
 
 class SARTimeSeriesExtractor:
     """
@@ -60,7 +60,7 @@ class SARTimeSeriesExtractor:
         print(f"\nFetching Sentinel-1 data from {start} to {end}...")
         
         # Create bounding box for Gujarat
-        bounds = config.GUJARAT_BOUNDS
+        bounds = config.STATE_BOUNDS
         aoi = ee.Geometry.Rectangle([
             bounds['min_lon'], bounds['min_lat'],
             bounds['max_lon'], bounds['max_lat']
@@ -276,7 +276,7 @@ def main():
     print("="*60)
     
     # Load grid
-    grid_file = os.path.join(config.RAW_DATA_DIR, 'gujarat_sampling_grid.csv')
+    grid_file = os.path.join(config.RAW_DATA_DIR, 'maharashtra_sampling_grid.csv')
     
     if not os.path.exists(grid_file):
         print(f"ERROR: Grid file not found: {grid_file}")
@@ -294,7 +294,7 @@ def main():
     
     # Save results
     if len(timeseries_df) > 0:
-        extractor.save_timeseries(timeseries_df)
+        extractor.save_timeseries(timeseries_df, filename='maharashtra_sar_timeseries.csv')
         print("\n" + "="*60)
         print("Time series extraction completed successfully!")
         print("="*60)
