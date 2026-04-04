@@ -1,9 +1,3 @@
-"""
-generate_wind_heatmap_v2.py
-INCOIS-style 2x2 heatmap — light theme, uses exact config_ml.py features
-Run from project root: python scripts/generate_wind_heatmap_v2.py
-"""
-
 import os
 import sys
 import pickle
