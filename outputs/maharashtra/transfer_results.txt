@@ -1,0 +1,34 @@
+
+============================================================
+ZERO-SHOT TRANSFER: Gujarat Model → Maharashtra Data
+============================================================
+Training data:    Gujarat coast (37,997 obs, 2020-2024)
+Test data:        Maharashtra coast (16,413 obs, 2020-2024)
+Model:            MLP v3 (256-128-64-32, BatchNorm, LeakyReLU, Huber)
+Scaler:           Gujarat-fitted StandardScaler
+============================================================
+
+OVERALL METRICS
+----------------------------------------
+  RMSE:  2.023 m/s
+  MAE:   1.467 m/s
+  R²:    0.3835
+  Bias:  +0.069 m/s
+
+Gujarat model's own val RMSE: 1.285 m/s (for comparison)
+
+STRATIFIED BY WIND SPEED BIN
+--------------------------------------------------
+     0-3 m/s: N= 4752  RMSE=2.059  Bias=+1.565
+     3-6 m/s: N= 8237  RMSE=1.333  Bias=+0.114
+     6-9 m/s: N= 2312  RMSE=2.188  Bias=-1.498
+    9-12 m/s: N=  821  RMSE=3.581  Bias=-2.759
+   12-15 m/s: N=  244  RMSE=5.066  Bias=-4.390
+     15+ m/s: N=   47  RMSE=9.858  Bias=-9.572
+
+STRATIFIED BY SEASON
+--------------------------------------------------
+  Winter         N= 4026  RMSE=1.769  Bias=+0.553
+  Pre-Monsoon    N= 4231  RMSE=1.682  Bias=-0.395
+  Monsoon        N= 5490  RMSE=2.601  Bias=-0.128
+  Post-Monsoon   N= 2666  RMSE=1.436  Bias=+0.478

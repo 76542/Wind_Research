@@ -203,7 +203,7 @@ def evaluate(df_raw, predictions):
     m = compute_metrics(y_true, predictions)
 
     results_path = os.path.join(OUTPUT_DIR, "transfer_results.txt")
-    with open(results_path, "w") as f:
+    with open(results_path, "w", encoding="utf-8") as f:
         header = f"""
 {'=' * 60}
 ZERO-SHOT TRANSFER: Gujarat Model → Maharashtra Data
