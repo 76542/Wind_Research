@@ -1,0 +1,16 @@
+
+======================================================================
+INDIAN WEST COAST — OFFSHORE WIND RESOURCE SUMMARY
+======================================================================
+Total sampling points: 463
+Latitude coverage: 8.14°N to 23.47°N
+Coastline length: ~1,800 km
+
+Per-state breakdown:
+State           Points   >4 avg   >6 avg   >8 avg       Model
+-----------------------------------------------------------------
+Gujarat            218      115       55       21   Home (v3)
+Maharashtra        115       75       22       12  Fine-tuned
+Goa                 12       53       15       10  MH FT xfer
+Karnataka           47       58       15        7  Fine-tuned
+Kerala              71       66       28        6  Fine-tuned
