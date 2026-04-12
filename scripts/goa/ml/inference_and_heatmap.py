@@ -272,11 +272,20 @@ Best model for Goa: {'Maharashtra FT' if mh_m['RMSE'] < gj_m['RMSE'] else 'Gujar
     land_mask = build_land_mask(coast_all_pts, grid_lon2d, grid_lat2d)
     combined_mask = land_mask | dist_mask
 
+    # Coastal anchor points: extend convex hull to coastline
+    coast_lons = np.array([p[0] for p in coast_all_pts])
+    coast_lats = np.array([p[1] for p in coast_all_pts])
+    coast_sub = np.column_stack([coast_lons[::20], coast_lats[::20]])
+    _, coast_nn_idx = tree.query(coast_sub)
+
     def make_map(cols, title_prefix, filename, subtitle):
         fig, axes = plt.subplots(1, 3, figsize=(20, 6))
         for ax, (col, label) in zip(axes, cols):
             values = per_point[col].values
-            grid_z = griddata(points, values, (grid_lon2d, grid_lat2d),
+            coast_vals = values[coast_nn_idx]
+            aug_pts = np.vstack([points, coast_sub])
+            aug_vals = np.concatenate([values, coast_vals])
+            grid_z = griddata(aug_pts, aug_vals, (grid_lon2d, grid_lat2d),
                               method='cubic')
             grid_z[combined_mask] = np.nan
             grid_z = np.clip(grid_z, 0, None)

@@ -197,21 +197,33 @@ ERA5 mean wind: {y.mean():.2f} m/s
     glat = np.linspace(11.7, 15.0, 500)
     glon2d, glat2d = np.meshgrid(glon, glat)
 
-    # KEY FIX: reduced distance threshold from 0.40 to 0.18
-    # This allows interpolation to extend closer to the coast
+    # Distance mask — same 0.40 as Maharashtra
     tree = cKDTree(points)
     dists, _ = tree.query(np.column_stack([glon2d.ravel(), glat2d.ravel()]))
-    dist_mask = dists.reshape(glon2d.shape) > 0.18
+    dist_mask = dists.reshape(glon2d.shape) > 0.40
 
     coast_segs = load_coastline()
     coast_all = [p for s in coast_segs for p in s]
     land_mask = build_land_mask(coast_all, glon2d, glat2d)
     combined = land_mask | dist_mask
 
+    # Build coastal anchor points: subsample coastline, assign nearest
+    # offshore point's value. This extends the convex hull to the coast
+    # so cubic interpolation fills all the way to shore (no gap).
+    coast_lons = np.array([p[0] for p in coast_all])
+    coast_lats = np.array([p[1] for p in coast_all])
+    coast_sub = np.column_stack([coast_lons[::20], coast_lats[::20]])
+    _, coast_nn_idx = tree.query(coast_sub)
+
     def make_map(cols, prefix, fname, subtitle):
         fig, axes = plt.subplots(1, 3, figsize=(20, 8))
         for ax, (col, label) in zip(axes, cols):
-            gz = griddata(points, pp[col].values, (glon2d, glat2d), method='cubic')
+            values = pp[col].values
+            # Augment data points with coastal anchors
+            coast_vals = values[coast_nn_idx]
+            aug_pts = np.vstack([points, coast_sub])
+            aug_vals = np.concatenate([values, coast_vals])
+            gz = griddata(aug_pts, aug_vals, (glon2d, glat2d), method='cubic')
             gz[combined] = np.nan
             gz = np.clip(gz, 0, None)
             im = ax.pcolormesh(glon, glat, gz, cmap='jet', shading='auto')
