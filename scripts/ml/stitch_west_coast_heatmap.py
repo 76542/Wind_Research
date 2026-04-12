@@ -22,6 +22,15 @@ from scipy.spatial import cKDTree
 
 import torch
 
+try:
+    import cartopy.crs as ccrs
+    import cartopy.feature as cfeature
+    HAS_CARTOPY = True
+    print("Cartopy found")
+except ImportError:
+    HAS_CARTOPY = False
+    print("Cartopy not found — land may bleed onto Gujarat")
+
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
@@ -241,7 +250,12 @@ def main():
 
     # ── Plot function ─────────────────────────────────────────────
     def make_map(cols, title_prefix, filename, subtitle):
-        fig, axes = plt.subplots(1, 3, figsize=(24, 14))
+        if HAS_CARTOPY:
+            proj = ccrs.PlateCarree()
+            fig, axes = plt.subplots(1, 3, figsize=(24, 14),
+                                     subplot_kw={"projection": proj})
+        else:
+            fig, axes = plt.subplots(1, 3, figsize=(24, 14))
 
         for ax, (col, label) in zip(axes, cols):
             values = combined[col].values
@@ -251,23 +265,38 @@ def main():
             grid_z[combined_mask] = np.nan
             grid_z = np.clip(grid_z, 0, None)
 
-            im = ax.pcolormesh(grid_lon, grid_lat, grid_z, cmap='jet',
-                                shading='auto')
+            if HAS_CARTOPY:
+                im = ax.pcolormesh(grid_lon, grid_lat, grid_z, cmap='jet',
+                                    shading='auto', transform=proj, zorder=1)
+                ax.add_feature(cfeature.LAND.with_scale("10m"),
+                               facecolor="#cccccc", edgecolor="black",
+                               linewidth=0.7, zorder=2)
+                ax.add_feature(cfeature.COASTLINE.with_scale("10m"),
+                               edgecolor="black", linewidth=0.8, zorder=3)
+                ax.add_feature(cfeature.BORDERS.with_scale("10m"),
+                               edgecolor="#555555", linewidth=0.5,
+                               linestyle="--", zorder=3)
+                ax.set_extent([66.5, 78.0, 7.8, 24.8], crs=proj)
+                gl = ax.gridlines(draw_labels=True, linewidth=0.3,
+                                  color="gray", alpha=0.5, linestyle="--")
+                gl.top_labels = False
+                gl.right_labels = False
+                gl.xlabel_style = {"color": "black", "size": 8}
+                gl.ylabel_style = {"color": "black", "size": 8}
+            else:
+                im = ax.pcolormesh(grid_lon, grid_lat, grid_z, cmap='jet',
+                                    shading='auto')
+                for seg in all_coast_segments:
+                    lons, lats = zip(*seg)
+                    ax.plot(lons, lats, color='gray', linewidth=0.5, alpha=0.6)
+                ax.set_xlim(66.5, 78.0)
+                ax.set_ylim(7.8, 24.8)
 
-            # Draw all coastlines
-            for seg in all_coast_segments:
-                lons, lats = zip(*seg)
-                ax.plot(lons, lats, color='gray', linewidth=0.5, alpha=0.6)
-
-            ax.set_xlim(66.5, 78.0)
-            ax.set_ylim(7.8, 24.8)
             ax.set_xlabel('Longitude (°E)', fontsize=11)
             ax.set_ylabel('Latitude (°N)', fontsize=11)
             ax.set_title(f'{title_prefix}  |  Days {label}',
                          fontsize=13, fontweight='bold')
-            ax.set_aspect('equal')
-            ax.set_facecolor('lightgray')
-            ax.grid(True, alpha=0.2, linewidth=0.3)
+            ax.set_facecolor('white')
 
             ax.text(0.03, 0.97, f'{label}', transform=ax.transAxes,
                     fontsize=16, fontweight='bold', verticalalignment='top',
