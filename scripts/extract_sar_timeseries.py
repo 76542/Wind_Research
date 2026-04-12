@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from scripts.karnataka import config
+from scripts.kerala import config
 
 class SARTimeSeriesExtractor:
     """
@@ -276,7 +276,7 @@ def main():
     print("="*60)
     
     # Load grid
-    grid_file = os.path.join(config.RAW_DATA_DIR, 'karnataka_sampling_grid.csv')
+    grid_file = os.path.join(config.RAW_DATA_DIR, 'kerala_sampling_grid.csv')
     
     if not os.path.exists(grid_file):
         print(f"ERROR: Grid file not found: {grid_file}")
@@ -294,7 +294,7 @@ def main():
     
     # Save results
     if len(timeseries_df) > 0:
-        extractor.save_timeseries(timeseries_df, filename='karnataka_sar_timeseries.csv')
+        extractor.save_timeseries(timeseries_df, filename='kerala_sar_timeseries.csv')
         print("\n" + "="*60)
         print("Time series extraction completed successfully!")
         print("="*60)
