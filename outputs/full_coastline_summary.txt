@@ -2,8 +2,8 @@
 ===========================================================================
 INDIAN COASTLINE — FULL OFFSHORE WIND RESOURCE SUMMARY
 ===========================================================================
-Total sampling points: 701
-Total observations: 110,423
+Total sampling points: 721
+Total observations: 113,405
 States covered: 8 (5 west coast + 3 east coast)
 Latitude coverage: 8.14°N to 23.47°N
 
@@ -20,10 +20,10 @@ Goa                      W     12       53       15       10    MH FT transfer
 Karnataka                W     47       58       15        7     FT from MH FT
 Kerala                   W     71       66       28        6     FT from KA FT
 Tamil Nadu               E     93      111       65       27   FT from Gujarat
-Andhra Pradesh           E     81      120       66       21     FT from TN FT
+Andhra Pradesh           E    101      105       55       16     FT from TN FT
 Odisha                   E     64      100       56       21     FT from AP FT
 
 ===========================================================================
 West coast total: 463 points
-East coast total: 238 points
-Grand total: 701 points, 110,423 observations
+East coast total: 258 points
+Grand total: 721 points, 113,405 observations

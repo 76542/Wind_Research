@@ -1286,8 +1286,8 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          84.03449,
-          18.05733
+          84.02894,
+          18.05462
         ]
       },
       "properties": {
@@ -1295,6 +1295,326 @@
         "offshore_distance_km": 20,
         "coastal_lon": 83.94507,
         "coastal_lat": 18.21623
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          84.13831,
+          18.10611
+        ]
+      },
+      "properties": {
+        "point_id": "AP_0082",
+        "offshore_distance_km": 20,
+        "coastal_lon": 84.03597,
+        "coastal_lat": 18.25784
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          84.26494,
+          18.2075
+        ]
+      },
+      "properties": {
+        "point_id": "AP_0083",
+        "offshore_distance_km": 20,
+        "coastal_lon": 84.13151,
+        "coastal_lat": 18.33565
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          84.30091,
+          18.25954
+        ]
+      },
+      "properties": {
+        "point_id": "AP_0084",
+        "offshore_distance_km": 20,
+        "coastal_lon": 84.16232,
+        "coastal_lat": 18.3827
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          84.39013,
+          18.342
+        ]
+      },
+      "properties": {
+        "point_id": "AP_0085",
+        "offshore_distance_km": 20,
+        "coastal_lon": 84.26211,
+        "coastal_lat": 18.47512
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          84.49999,
+          18.44101
+        ]
+      },
+      "properties": {
+        "point_id": "AP_0086",
+        "offshore_distance_km": 20,
+        "coastal_lon": 84.36121,
+        "coastal_lat": 18.56412
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          84.52313,
+          18.50034
+        ]
+      },
+      "properties": {
+        "point_id": "AP_0087",
+        "offshore_distance_km": 20,
+        "coastal_lon": 84.34535,
+        "coastal_lat": 18.56408
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          84.51614,
+          18.47655
+        ]
+      },
+      "properties": {
+        "point_id": "AP_0088",
+        "offshore_distance_km": 20,
+        "coastal_lon": 84.37288,
+        "coastal_lat": 18.59499
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          84.59751,
+          18.57093
+        ]
+      },
+      "properties": {
+        "point_id": "AP_0089",
+        "offshore_distance_km": 20,
+        "coastal_lon": 84.45951,
+        "coastal_lat": 18.69494
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          84.70669,
+          18.67777
+        ]
+      },
+      "properties": {
+        "point_id": "AP_0090",
+        "offshore_distance_km": 20,
+        "coastal_lon": 84.55722,
+        "coastal_lat": 18.7893
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          84.777,
+          18.79634
+        ]
+      },
+      "properties": {
+        "point_id": "AP_0091",
+        "offshore_distance_km": 20,
+        "coastal_lon": 84.62374,
+        "coastal_lat": 18.9033
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          84.8598,
+          18.88529
+        ]
+      },
+      "properties": {
+        "point_id": "AP_0092",
+        "offshore_distance_km": 20,
+        "coastal_lon": 84.71137,
+        "coastal_lat": 18.99828
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          84.97333,
+          19.06231
+        ]
+      },
+      "properties": {
+        "point_id": "AP_0093",
+        "offshore_distance_km": 20,
+        "coastal_lon": 84.78906,
+        "coastal_lat": 19.10865
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          84.91062,
+          19.02512
+        ]
+      },
+      "properties": {
+        "point_id": "AP_0094",
+        "offshore_distance_km": 20,
+        "coastal_lon": 84.73985,
+        "coastal_lat": 19.1053
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          84.93178,
+          19.00722
+        ]
+      },
+      "properties": {
+        "point_id": "AP_0095",
+        "offshore_distance_km": 20,
+        "coastal_lon": 84.80594,
+        "coastal_lat": 19.14262
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          85.03087,
+          19.11486
+        ]
+      },
+      "properties": {
+        "point_id": "AP_0096",
+        "offshore_distance_km": 20,
+        "coastal_lon": 84.89722,
+        "coastal_lat": 19.24348
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          85.07476,
+          19.15113
+        ]
+      },
+      "properties": {
+        "point_id": "AP_0097",
+        "offshore_distance_km": 20,
+        "coastal_lon": 84.96468,
+        "coastal_lat": 19.29835
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          85.18969,
+          19.22502
+        ]
+      },
+      "properties": {
+        "point_id": "AP_0098",
+        "offshore_distance_km": 20,
+        "coastal_lon": 85.08113,
+        "coastal_lat": 19.37327
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          85.21263,
+          19.24845
+        ]
+      },
+      "properties": {
+        "point_id": "AP_0099",
+        "offshore_distance_km": 20,
+        "coastal_lon": 85.07958,
+        "coastal_lat": 19.37772
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          85.29718,
+          19.32647
+        ]
+      },
+      "properties": {
+        "point_id": "AP_0100",
+        "offshore_distance_km": 20,
+        "coastal_lon": 85.178,
+        "coastal_lat": 19.46732
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          85.39422,
+          19.3947
+        ]
+      },
+      "properties": {
+        "point_id": "AP_0101",
+        "offshore_distance_km": 20,
+        "coastal_lon": 85.29093,
+        "coastal_lat": 19.54633
       }
     }
   ]

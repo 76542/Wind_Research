@@ -2,7 +2,7 @@
 ======================================================================
 INDIAN EAST COAST — OFFSHORE WIND RESOURCE SUMMARY
 ======================================================================
-Total sampling points: 238
+Total sampling points: 258
 Latitude coverage: 8.15°N to 21.66°N
 States: Tamil Nadu, Andhra Pradesh, Odisha
 Chain: Gujarat original → TN FT → AP FT → Odisha FT
@@ -11,5 +11,5 @@ Per-state breakdown:
 State                Points   >4 avg   >6 avg   >8 avg         Model
 ----------------------------------------------------------------------
 Tamil Nadu               93      111       65       27  FT from Gujarat
-Andhra Pradesh           81      120       66       21  FT from TN FT
+Andhra Pradesh          101      105       55       16  FT from TN FT
 Odisha                   64      100       56       21  FT from AP FT
