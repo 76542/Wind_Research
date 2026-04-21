@@ -12,4 +12,4 @@ State                Points   >4 avg   >6 avg   >8 avg         Model
 ----------------------------------------------------------------------
 Tamil Nadu               93      111       65       27  FT from Gujarat
 Andhra Pradesh           81      120       66       21  FT from TN FT
-Odisha                   64      102       57       20  FT from AP FT
+Odisha                   64      100       56       21  FT from AP FT

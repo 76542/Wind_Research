@@ -25,7 +25,7 @@ for directory in [RAW_DATA_DIR, PROCESSED_DATA_DIR, OUTPUT_DIR, MODELS_DIR, LOGS
 STATE_BOUNDS = {
     'min_lon': 84.0,
     'max_lon': 88.0,
-    'min_lat': 19.0,
+    'min_lat': 18.0,
     'max_lat': 22.0
 }
 
@@ -83,7 +83,7 @@ def get_coastline():
         pass
 
     LON_MIN, LON_MAX = 84.0, 88.0
-    LAT_MIN, LAT_MAX = 19.0, 22.0
+    LAT_MIN, LAT_MAX = 18.0, 22.0
 
     india_geom = (
         ee.FeatureCollection("USDOS/LSIB_SIMPLE/2017")
