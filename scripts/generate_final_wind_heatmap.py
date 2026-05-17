@@ -23,7 +23,7 @@ BASE        = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_CSV    = os.path.join(BASE, "data", "processed", "era5_collocated.csv")
 SCALER_PATH = os.path.join(BASE, "models", "feature_scaler.pkl")
 MODEL_PATH  = os.path.join(BASE, "models", "mlp_v3_wind_model.pth")
-OUT_PATH    = os.path.join(BASE, "outputs", "gujarat_final_wind_heatmap.png")
+OUT_PATH    = os.path.join(BASE, "outputs", "gujarat_final_wind_heatmap_new.png")
 os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
 
 # ── Exact feature list from config_ml.py ──────────────────────────────────────
@@ -69,9 +69,9 @@ print(f"  {len(df)} rows, {df['point_id'].nunique()} unique points")
 print("Computing ERA5 wind potential...")
 meta = df.groupby("point_id")[["latitude","longitude"]].first().reset_index()
 
-def count_days(df, col, thresh):
-    grp = df.groupby("point_id")[col].apply(lambda x: (x > thresh).sum())
-    return grp.reset_index().rename(columns={col: "days"}).merge(meta, on="point_id")
+def count_pct(df, col, thresh):
+    grp = df.groupby("point_id")[col].apply(lambda x: (x > thresh).mean() * 100)
+    return grp.reset_index().rename(columns={col: "pct"}).merge(meta, on="point_id")
 
 
 # ── Load saved scaler & model ──────────────────────────────────────────────────
@@ -95,12 +95,12 @@ with torch.no_grad():
         preds.append(model(X_t[i:i+4096]).numpy())
 df["mlp_pred"] = np.clip(np.concatenate(preds), 0, None)
 
-mlp_6 = count_days(df, "mlp_pred", 6)
-mlp_8 = count_days(df, "mlp_pred", 8)
-mlp_4 = count_days(df, "mlp_pred", 4)
-print(f"  MLP >4 m/s: max={mlp_4['days'].max()}, mean={mlp_4['days'].mean():.0f}")
-print(f"  MLP >6 m/s: max={mlp_6['days'].max()}, mean={mlp_6['days'].mean():.0f}")
-print(f"  MLP >8 m/s: max={mlp_8['days'].max()}, mean={mlp_8['days'].mean():.0f}")
+mlp_6 = count_pct(df, "mlp_pred", 6)
+mlp_8 = count_pct(df, "mlp_pred", 8)
+mlp_4 = count_pct(df, "mlp_pred", 4)
+print(f"  MLP >4 m/s: max={mlp_4['pct'].max():.1f}%, mean={mlp_4['pct'].mean():.1f}%")
+print(f"  MLP >6 m/s: max={mlp_6['pct'].max():.1f}%, mean={mlp_6['pct'].mean():.1f}%")
+print(f"  MLP >8 m/s: max={mlp_8['pct'].max():.1f}%, mean={mlp_8['pct'].mean():.1f}%")
 
 # ── Interpolation — masked strictly to convex hull of actual points ────────────
 lat_min, lat_max = 19.3, 24.8
@@ -122,7 +122,7 @@ too_far   = dists > 0.25
 
 def interp(df_pt):
     pts  = df_pt[["longitude","latitude"]].values
-    vals = df_pt["days"].values.astype(float)
+    vals = df_pt["pct"].values.astype(float)
     grid = griddata(pts, vals, (gi_lon, gi_lat), method="linear")
     grid.ravel()[too_far] = np.nan
     return grid
@@ -147,10 +147,11 @@ else:
 fig.patch.set_facecolor("white")
 
 panels = [
-    (0, 0, "MLP v3 (SAR)", "> 4 m/s", g_mlp_4, mlp_4, mlp_4["days"].max()),
-    (0, 1, "MLP v3 (SAR)", "> 6 m/s", g_mlp_6, mlp_6, mlp_6["days"].max()),
-    (0, 2, "MLP v3 (SAR)", "> 8 m/s", g_mlp_8, mlp_8, mlp_8["days"].max()),
+    (0, 0, "MLP v3 (SAR)", "> 4 m/s", g_mlp_4, mlp_4, mlp_4["pct"].max()),
+    (0, 1, "MLP v3 (SAR)", "> 6 m/s", g_mlp_6, mlp_6, mlp_6["pct"].max()),
+    (0, 2, "MLP v3 (SAR)", "> 8 m/s", g_mlp_8, mlp_8, mlp_8["pct"].max()),
 ]
+
 for row, col, src_label, thresh_label, grid, pts_df, vmax in panels:
     ax = axes[col]
 
@@ -174,13 +175,13 @@ for row, col, src_label, thresh_label, grid, pts_df, vmax in panels:
         gl.xlabel_style = {"color": "black", "size": 8}
         gl.ylabel_style = {"color": "black", "size": 8}
         ax.scatter(pts_df["longitude"], pts_df["latitude"],
-                   c=pts_df["days"], cmap=cmap, vmin=0, vmax=vmax,
+                   c=pts_df["pct"], cmap=cmap, vmin=0, vmax=vmax,
                    s=8, edgecolors="none", zorder=5, transform=proj)
     else:
         im = ax.pcolormesh(gi_lon, gi_lat, grid, cmap=cmap,
                            vmin=0, vmax=vmax, shading="auto", zorder=1)
         ax.scatter(pts_df["longitude"], pts_df["latitude"],
-                   c=pts_df["days"], cmap=cmap, vmin=0, vmax=vmax,
+                   c=pts_df["pct"], cmap=cmap, vmin=0, vmax=vmax,
                    s=8, edgecolors="none", zorder=5)
         ax.set_xlim(lon_min, lon_max)
         ax.set_ylim(lat_min, lat_max)
@@ -191,12 +192,12 @@ for row, col, src_label, thresh_label, grid, pts_df, vmax in panels:
             sp.set_edgecolor("black")
 
     cb = fig.colorbar(im, ax=ax, fraction=0.038, pad=0.02)
-    cb.set_label("Number of Days", color="black", fontsize=9)
+    cb.set_label("% of Observations", color="black", fontsize=9)
     cb.ax.yaxis.set_tick_params(color="black")
     plt.setp(cb.ax.yaxis.get_ticklabels(), color="black", fontsize=8)
 
     ax.set_facecolor("white")
-    ax.set_title(f"{src_label}  |  Days {thresh_label}",
+    ax.set_title(f"{src_label}  |  {thresh_label}",
                  color="black", fontsize=11, pad=7, fontweight="bold")
 
     ax.text(0.03, 0.95, thresh_label, transform=ax.transAxes,

@@ -182,12 +182,12 @@ ERA5 mean wind: {y.mean():.2f} m/s
     pred_col = "ka_pred"
 
     pp = df_raw.groupby(['point_id','latitude','longitude']).agg(
-        days_gt4=(pred_col, lambda x: (x>4).sum()),
-        days_gt6=(pred_col, lambda x: (x>6).sum()),
-        days_gt8=(pred_col, lambda x: (x>8).sum()),
-        days_gt4_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x>4).sum()),
-        days_gt6_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x>6).sum()),
-        days_gt8_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x>8).sum()),
+        pct_gt4=(pred_col, lambda x: (x>4).mean() * 100),
+        pct_gt6=(pred_col, lambda x: (x>6).mean() * 100),
+        pct_gt8=(pred_col, lambda x: (x>8).mean() * 100),
+        pct_gt4_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x>4).mean() * 100),
+        pct_gt6_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x>6).mean() * 100),
+        pct_gt8_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x>8).mean() * 100),
     ).reset_index()
 
     points = pp[['longitude','latitude']].values
@@ -232,13 +232,13 @@ ERA5 mean wind: {y.mean():.2f} m/s
                 ax.plot(lons, lats, color='gray', linewidth=0.8, alpha=0.7)
             ax.set_xlim(73.0, 75.5); ax.set_ylim(11.7, 15.0)
             ax.set_xlabel('Longitude (°E)'); ax.set_ylabel('Latitude (°N)')
-            ax.set_title(f'{prefix}  |  Days {label}', fontsize=12, fontweight='bold')
+            ax.set_title(f'{prefix}  |  {label}', fontsize=12, fontweight='bold')
             ax.set_aspect('equal'); ax.set_facecolor('lightgray')
             ax.grid(True, alpha=0.2)
             ax.text(0.03, 0.97, f'{label}', transform=ax.transAxes, fontsize=14,
                     fontweight='bold', va='top',
                     bbox=dict(boxstyle='round,pad=0.3', fc='white', ec='black', alpha=0.8))
-            plt.colorbar(im, ax=ax, label='Number of Days', shrink=0.75)
+            plt.colorbar(im, ax=ax, label='% of Observations', shrink=0.75)
         fig.suptitle(f'Offshore Wind Resource Potential — Karnataka Coast (2020-2024)\n{subtitle}',
                      fontsize=14, fontweight='bold', y=1.02)
         plt.tight_layout()
@@ -246,11 +246,11 @@ ERA5 mean wind: {y.mean():.2f} m/s
         plt.savefig(path, dpi=150, bbox_inches='tight'); plt.close()
         print(f"Saved: {path}")
 
-    make_map([('days_gt4','> 4 m/s'),('days_gt6','> 6 m/s'),('days_gt8','> 8 m/s')],
-             'MLP v3 (Karnataka FT)', 'karnataka_finetuned_heatmap.png',
+    make_map([('pct_gt4','> 4 m/s'),('pct_gt6','> 6 m/s'),('pct_gt8','> 8 m/s')],
+             'MLP v3 (Karnataka FT)', 'new_karnataka_finetuned_heatmap.png',
              'MLP v3 SAR-based Prediction (Fine-Tuned)  |  Sentinel-1 100m Hub-Height')
-    make_map([('days_gt4_era5','> 4 m/s'),('days_gt6_era5','> 6 m/s'),('days_gt8_era5','> 8 m/s')],
-             'ERA5 (Truth)', 'karnataka_era5_heatmap.png',
+    make_map([('pct_gt4_era5','> 4 m/s'),('pct_gt6_era5','> 6 m/s'),('pct_gt8_era5','> 8 m/s')],
+             'ERA5 (Truth)', 'new_karnataka_era5_heatmap.png',
              'ERA5 100m Hub-Height Wind Speed (Ground Truth Reference)')
 
     print(f"\n{'='*60}\nKARNATAKA FINE-TUNED HEATMAPS COMPLETE\n{'='*60}")

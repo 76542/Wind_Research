@@ -245,12 +245,12 @@ Best model for Goa: {'Maharashtra FT' if mh_m['RMSE'] < gj_m['RMSE'] else 'Gujar
     print("\nGenerating heatmap...")
 
     per_point = df_raw.groupby(['point_id', 'latitude', 'longitude']).agg(
-        days_gt4=(best_pred_col, lambda x: (x > 4).sum()),
-        days_gt6=(best_pred_col, lambda x: (x > 6).sum()),
-        days_gt8=(best_pred_col, lambda x: (x > 8).sum()),
-        days_gt4_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x > 4).sum()),
-        days_gt6_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x > 6).sum()),
-        days_gt8_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x > 8).sum()),
+        pct_gt4=(best_pred_col, lambda x: (x > 4).mean() * 100),
+        pct_gt6=(best_pred_col, lambda x: (x > 6).mean() * 100),
+        pct_gt8=(best_pred_col, lambda x: (x > 8).mean() * 100),
+        pct_gt4_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x > 4).mean() * 100),
+        pct_gt6_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x > 6).mean() * 100),
+        pct_gt8_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x > 8).mean() * 100),
     ).reset_index()
 
     points = per_point[['longitude', 'latitude']].values
@@ -298,7 +298,7 @@ Best model for Goa: {'Maharashtra FT' if mh_m['RMSE'] < gj_m['RMSE'] else 'Gujar
             ax.set_ylim(14.7, 15.9)
             ax.set_xlabel('Longitude (E)')
             ax.set_ylabel('Latitude (N)')
-            ax.set_title(f'{title_prefix}  |  Days {label}',
+            ax.set_title(f'{title_prefix}  | {label}',
                          fontsize=12, fontweight='bold')
             ax.set_aspect('equal')
             ax.set_facecolor('lightgray')
@@ -307,7 +307,7 @@ Best model for Goa: {'Maharashtra FT' if mh_m['RMSE'] < gj_m['RMSE'] else 'Gujar
                     fontsize=14, fontweight='bold', verticalalignment='top',
                     bbox=dict(boxstyle='round,pad=0.3', facecolor='white',
                               edgecolor='black', alpha=0.8))
-            plt.colorbar(im, ax=ax, label='Number of Days', shrink=0.75)
+            plt.colorbar(im, ax=ax, label='% of Observations', shrink=0.75)
         fig.suptitle(
             f'Offshore Wind Resource Potential - Goa Coast (2020-2024)\n'
             f'{subtitle}', fontsize=14, fontweight='bold', y=1.02)
@@ -318,16 +318,16 @@ Best model for Goa: {'Maharashtra FT' if mh_m['RMSE'] < gj_m['RMSE'] else 'Gujar
         print(f"Saved: {path}")
 
     make_map(
-        [('days_gt4', '> 4 m/s'), ('days_gt6', '> 6 m/s'),
-         ('days_gt8', '> 8 m/s')],
-        f'MLP v3 ({best_name})', 'goa_model_heatmap.png',
+        [('pct_gt4', '> 4 m/s'), ('pct_gt6', '> 6 m/s'),
+         ('pct_gt8', '> 8 m/s')],
+        f'MLP v3 ({best_name})', 'new_goa_model_heatmap.png',
         f'MLP v3 SAR-based Prediction ({best_name} Transfer)  |  '
         f'Sentinel-1 100m Hub-Height')
 
     make_map(
-        [('days_gt4_era5', '> 4 m/s'), ('days_gt6_era5', '> 6 m/s'),
-         ('days_gt8_era5', '> 8 m/s')],
-        'ERA5 (Truth)', 'goa_era5_heatmap.png',
+        [('pct_gt4_era5', '> 4 m/s'), ('pct_gt6_era5', '> 6 m/s'),
+         ('pct_gt8_era5', '> 8 m/s')],
+        'ERA5 (Truth)', 'new_goa_era5_heatmap.png',
         'ERA5 100m Hub-Height Wind Speed (Ground Truth Reference)')
 
     print("\n" + "=" * 60)

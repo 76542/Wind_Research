@@ -7,10 +7,10 @@ Latitude coverage: 8.14°N to 23.47°N
 Coastline length: ~1,800 km
 
 Per-state breakdown:
-State           Points   >4 avg   >6 avg   >8 avg       Model
+State           Points     >4 %     >6 %     >8 %       Model
 -----------------------------------------------------------------
-Gujarat            218      115       55       21   Home (v3)
-Maharashtra        115       75       22       12  Fine-tuned
-Goa                 12       53       15       10  MH FT xfer
-Karnataka           47       58       15        7  Fine-tuned
-Kerala              71       66       28        6  Fine-tuned
+Gujarat            218     65.2     30.4     11.8   Home (v3)
+Maharashtra        115     52.2     15.0      8.8  Fine-tuned
+Goa                 12     50.7     14.5      9.2  MH FT xfer
+Karnataka           47     42.2     11.3      5.3  Fine-tuned
+Kerala              71     42.6     18.3      3.7  Fine-tuned

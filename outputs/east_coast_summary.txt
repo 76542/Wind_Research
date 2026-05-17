@@ -8,8 +8,8 @@ States: Tamil Nadu, Andhra Pradesh, Odisha
 Chain: Gujarat original → TN FT → AP FT → Odisha FT
 
 Per-state breakdown:
-State                Points   >4 avg   >6 avg   >8 avg         Model
+State                Points     >4 %     >6 %     >8 %         Model
 ----------------------------------------------------------------------
-Tamil Nadu               93      111       65       27  FT from Gujarat
-Andhra Pradesh          101      105       55       16  FT from TN FT
-Odisha                   64      100       56       21  FT from AP FT
+Tamil Nadu               93     74.0     42.6     17.8  FT from Gujarat
+Andhra Pradesh          101     62.6     32.6      9.1  FT from TN FT
+Odisha                   64     65.6     36.8     13.7  FT from AP FT

@@ -229,12 +229,12 @@ ERA5 mean wind: {y_true.mean():.2f} m/s
     print("\nGenerating heatmaps...")
 
     per_point = df_raw.groupby(['point_id', 'latitude', 'longitude']).agg(
-        days_gt4_ft=('ft_pred', lambda x: (x > 4).sum()),
-        days_gt6_ft=('ft_pred', lambda x: (x > 6).sum()),
-        days_gt8_ft=('ft_pred', lambda x: (x > 8).sum()),
-        days_gt4_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x > 4).sum()),
-        days_gt6_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x > 6).sum()),
-        days_gt8_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x > 8).sum()),
+        pct_gt4_ft=('ft_pred', lambda x: (x > 4).mean() * 100),
+        pct_gt6_ft=('ft_pred', lambda x: (x > 6).mean() * 100),
+        pct_gt8_ft=('ft_pred', lambda x: (x > 8).mean() * 100),
+        pct_gt4_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x > 4).mean() * 100),
+        pct_gt6_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x > 6).mean() * 100),
+        pct_gt8_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x > 8).mean() * 100),
     ).reset_index()
 
     points = per_point[['longitude', 'latitude']].values
@@ -283,7 +283,7 @@ ERA5 mean wind: {y_true.mean():.2f} m/s
             ax.set_ylim(7.9, 12.1)
             ax.set_xlabel('Longitude (°E)', fontsize=11)
             ax.set_ylabel('Latitude (°N)', fontsize=11)
-            ax.set_title(f'{title_prefix}  |  Days {label}',
+            ax.set_title(f'{title_prefix}  | {label}',
                          fontsize=12, fontweight='bold')
             ax.set_aspect('equal')
             ax.set_facecolor('lightgray')
@@ -297,7 +297,7 @@ ERA5 mean wind: {y_true.mean():.2f} m/s
                     fontsize=8, ha='right', va='bottom', alpha=0.4,
                     bbox=dict(boxstyle='round', facecolor='white', alpha=0.5))
 
-            plt.colorbar(im, ax=ax, label='Number of Days', shrink=0.75,
+            plt.colorbar(im, ax=ax, label='% of Observations', shrink=0.75,
                          pad=0.02)
 
         fig.suptitle(
@@ -311,17 +311,17 @@ ERA5 mean wind: {y_true.mean():.2f} m/s
         print(f"Saved: {path}")
 
     make_map(
-        [('days_gt4_ft', '> 4 m/s'), ('days_gt6_ft', '> 6 m/s'),
-         ('days_gt8_ft', '> 8 m/s')],
-        'MLP v3 (Kerala FT)', 'kerala_finetuned_heatmap.png',
+        [('pct_gt4_ft', '> 4 m/s'), ('pct_gt6_ft', '> 6 m/s'),
+         ('pct_gt8_ft', '> 8 m/s')],
+        'MLP v3 (Kerala FT)', 'new_kerala_finetuned_heatmap.png',
         'MLP v3 SAR-based Prediction (Fine-Tuned)  |  '
         'Sentinel-1 100m Hub-Height'
     )
 
     make_map(
-        [('days_gt4_era5', '> 4 m/s'), ('days_gt6_era5', '> 6 m/s'),
-         ('days_gt8_era5', '> 8 m/s')],
-        'ERA5 (Truth)', 'kerala_era5_heatmap.png',
+        [('pct_gt4_era5', '> 4 m/s'), ('pct_gt6_era5', '> 6 m/s'),
+         ('pct_gt8_era5', '> 8 m/s')],
+        'ERA5 (Truth)', 'new_kerala_era5_heatmap.png',
         'ERA5 100m Hub-Height Wind Speed (Ground Truth Reference)'
     )
 

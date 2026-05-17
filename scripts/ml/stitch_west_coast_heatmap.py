@@ -195,19 +195,18 @@ def main():
 
         # Per-point threshold counts
         pp = df_raw.groupby(['point_id', 'latitude', 'longitude']).agg(
-            days_gt4=('best_pred', lambda x: (x > 4).sum()),
-            days_gt6=('best_pred', lambda x: (x > 6).sum()),
-            days_gt8=('best_pred', lambda x: (x > 8).sum()),
-            days_gt4_era5=(TARGET, lambda x: (x > 4).sum()),
-            days_gt6_era5=(TARGET, lambda x: (x > 6).sum()),
-            days_gt8_era5=(TARGET, lambda x: (x > 8).sum()),
+            pct_gt4=('best_pred', lambda x: (x > 4).mean() * 100),
+            pct_gt6=('best_pred', lambda x: (x > 6).mean() * 100),
+            pct_gt8=('best_pred', lambda x: (x > 8).mean() * 100),
+            pct_gt4_era5=(TARGET, lambda x: (x > 4).mean() * 100),
+            pct_gt6_era5=(TARGET, lambda x: (x > 6).mean() * 100),
+            pct_gt8_era5=(TARGET, lambda x: (x > 8).mean() * 100),
         ).reset_index()
         pp['state'] = state_name
 
-        print(f"  {len(pp)} points | Days>4: {pp.days_gt4.mean():.0f} avg | "
-              f"Days>6: {pp.days_gt6.mean():.0f} avg | "
-              f"Days>8: {pp.days_gt8.mean():.0f} avg")
-
+        print(f"  {len(pp)} points | %>4: {pp.pct_gt4.mean():.1f}% avg | "
+              f"%>6: {pp.pct_gt6.mean():.1f}% avg | "
+              f"%>8: {pp.pct_gt8.mean():.1f}% avg")
         all_per_point.append(pp)
 
     # ── Combine all states ────────────────────────────────────────
@@ -294,7 +293,7 @@ def main():
 
             ax.set_xlabel('Longitude (°E)', fontsize=11)
             ax.set_ylabel('Latitude (°N)', fontsize=11)
-            ax.set_title(f'{title_prefix}  |  Days {label}',
+            ax.set_title(f'{title_prefix}  |  {label}',
                          fontsize=13, fontweight='bold')
             ax.set_facecolor('white')
 
@@ -315,7 +314,7 @@ def main():
                 ax.text(slon, slat, sname, fontsize=7, color='black',
                         alpha=0.5, fontstyle='italic')
 
-            plt.colorbar(im, ax=ax, label='Number of Days', shrink=0.6,
+            plt.colorbar(im, ax=ax, label='% of Observations', shrink=0.6,
                          pad=0.02)
 
         fig.suptitle(
@@ -332,17 +331,17 @@ def main():
     print("\nGenerating stitched heatmaps...")
 
     make_map(
-        [('days_gt4', '> 4 m/s'), ('days_gt6', '> 6 m/s'),
-         ('days_gt8', '> 8 m/s')],
-        'MLP v3 (SAR)', 'west_coast_model_heatmap.png',
+        [('pct_gt4', '> 4 m/s'), ('pct_gt6', '> 6 m/s'),
+         ('pct_gt8', '> 8 m/s')],
+        'MLP v3 (SAR)', 'new_west_coast_model_heatmap.png',
         'MLP v3 SAR-based Prediction  |  Sentinel-1 100m Hub-Height\n'
         'Gujarat (Home) + Maharashtra (FT) + Goa (MH Transfer) + '
         'Karnataka (FT) + Kerala (FT)')
 
     make_map(
-        [('days_gt4_era5', '> 4 m/s'), ('days_gt6_era5', '> 6 m/s'),
-         ('days_gt8_era5', '> 8 m/s')],
-        'ERA5 (Truth)', 'west_coast_era5_heatmap.png',
+        [('pct_gt4_era5', '> 4 m/s'), ('pct_gt6_era5', '> 6 m/s'),
+         ('pct_gt8_era5', '> 8 m/s')],
+        'ERA5 (Truth)', 'new_west_coast_era5_heatmap.png',
         'ERA5 100m Hub-Height Wind Speed (Ground Truth Reference)')
 
     # ── Summary table ─────────────────────────────────────────────
@@ -362,7 +361,7 @@ Per-state breakdown:
         print(header)
 
         fmt = "{:<15} {:>6} {:>8} {:>8} {:>8}  {:>10}"
-        hdr = fmt.format("State", "Points", ">4 avg", ">6 avg", ">8 avg", "Model")
+        hdr = fmt.format("State", "Points", ">4 %", ">6 %", ">8 %", "Model")
         f.write(hdr + "\n")
         print(hdr)
         f.write("-" * 65 + "\n")
@@ -378,8 +377,8 @@ Per-state breakdown:
         for state in ['Gujarat', 'Maharashtra', 'Goa', 'Karnataka', 'Kerala']:
             s = combined[combined.state == state]
             row = fmt.format(state, len(s),
-                f"{s.days_gt4.mean():.0f}", f"{s.days_gt6.mean():.0f}",
-                f"{s.days_gt8.mean():.0f}", model_names[state])
+                f"{s.pct_gt4.mean():.1f}", f"{s.pct_gt6.mean():.1f}",
+                f"{s.pct_gt8.mean():.1f}", model_names[state])
             f.write(row + "\n")
             print(row)
 
