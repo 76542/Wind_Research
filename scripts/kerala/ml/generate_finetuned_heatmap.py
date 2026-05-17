@@ -270,7 +270,7 @@ ERA5 mean wind: {y_true.mean():.2f} m/s
             grid_z = griddata(aug_pts, aug_vals, (grid_lon2d, grid_lat2d),
                               method='cubic')
             grid_z[combined_mask] = np.nan
-            grid_z = np.clip(grid_z, 0, None)
+            grid_z = np.clip(grid_z, 0, 100)
 
             im = ax.pcolormesh(grid_lon, grid_lat, grid_z, cmap='jet',
                                 shading='auto')
@@ -303,8 +303,9 @@ ERA5 mean wind: {y_true.mean():.2f} m/s
         fig.suptitle(
             f'Offshore Wind Resource Potential — Kerala Coast (2020-2024)\n'
             f'{subtitle}',
-            fontsize=14, fontweight='bold', y=1.02)
+            fontsize=14, fontweight='bold', y=0.98)
         plt.tight_layout()
+        fig.subplots_adjust(top=1.00)
         path = os.path.join(OUTPUT_DIR, filename)
         plt.savefig(path, dpi=150, bbox_inches='tight')
         plt.close()
@@ -314,7 +315,7 @@ ERA5 mean wind: {y_true.mean():.2f} m/s
         [('pct_gt4_ft', '> 4 m/s'), ('pct_gt6_ft', '> 6 m/s'),
          ('pct_gt8_ft', '> 8 m/s')],
         'MLP v3 (Kerala FT)', 'new_kerala_finetuned_heatmap.png',
-        'MLP v3 SAR-based Prediction (Fine-Tuned)  |  '
+        'MLP v3 SAR-based Prediction (Fine-Tuned from Karnataka FT)  |  '
         'Sentinel-1 100m Hub-Height'
     )
 

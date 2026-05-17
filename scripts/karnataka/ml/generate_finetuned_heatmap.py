@@ -225,7 +225,7 @@ ERA5 mean wind: {y.mean():.2f} m/s
             aug_vals = np.concatenate([values, coast_vals])
             gz = griddata(aug_pts, aug_vals, (glon2d, glat2d), method='cubic')
             gz[combined] = np.nan
-            gz = np.clip(gz, 0, None)
+            gz = np.clip(gz, 0, 100)
             im = ax.pcolormesh(glon, glat, gz, cmap='jet', shading='auto')
             for seg in coast_segs:
                 lons, lats = zip(*seg)
@@ -238,17 +238,21 @@ ERA5 mean wind: {y.mean():.2f} m/s
             ax.text(0.03, 0.97, f'{label}', transform=ax.transAxes, fontsize=14,
                     fontweight='bold', va='top',
                     bbox=dict(boxstyle='round,pad=0.3', fc='white', ec='black', alpha=0.8))
+            ax.text(0.97, 0.02, f'{prefix}', transform=ax.transAxes,
+                    fontsize=8, ha='right', va='bottom', alpha=0.4,
+                    bbox=dict(boxstyle='round', fc='white', alpha=0.5))
             plt.colorbar(im, ax=ax, label='% of Observations', shrink=0.75)
         fig.suptitle(f'Offshore Wind Resource Potential — Karnataka Coast (2020-2024)\n{subtitle}',
                      fontsize=14, fontweight='bold', y=1.02)
         plt.tight_layout()
+        fig.subplots_adjust(top=1.00)
         path = os.path.join(OUTPUT_DIR, fname)
         plt.savefig(path, dpi=150, bbox_inches='tight'); plt.close()
         print(f"Saved: {path}")
 
     make_map([('pct_gt4','> 4 m/s'),('pct_gt6','> 6 m/s'),('pct_gt8','> 8 m/s')],
              'MLP v3 (Karnataka FT)', 'new_karnataka_finetuned_heatmap.png',
-             'MLP v3 SAR-based Prediction (Fine-Tuned)  |  Sentinel-1 100m Hub-Height')
+             'MLP v3 SAR-based Prediction (Fine-Tuned from Maharashtra FT)  |  Sentinel-1 100m Hub-Height')
     make_map([('pct_gt4_era5','> 4 m/s'),('pct_gt6_era5','> 6 m/s'),('pct_gt8_era5','> 8 m/s')],
              'ERA5 (Truth)', 'new_karnataka_era5_heatmap.png',
              'ERA5 100m Hub-Height Wind Speed (Ground Truth Reference)')

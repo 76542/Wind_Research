@@ -226,7 +226,7 @@ def main():
             grid_z = griddata(points, values, (grid_lon2d, grid_lat2d),
                               method='cubic')
             grid_z[combined_mask] = np.nan
-            grid_z = np.clip(grid_z, 0, None)
+            grid_z = np.clip(grid_z, 0, 100)
 
             im = ax.pcolormesh(grid_lon, grid_lat, grid_z, cmap='jet',
                                 shading='auto')
@@ -281,8 +281,8 @@ def main():
     make_map(
         [('pct_gt4_ft', '> 4 m/s'), ('pct_gt6_ft', '> 6 m/s'),
          ('pct_gt8_ft', '> 8 m/s')],
-        'MLP v3 Fine-Tuned', 'maharashtra_finetuned_heatmap_new.png',
-        'MLP v3 SAR-based Prediction (Fine-Tuned)  |  '
+        'MLP v3 (Maharashtra FT)', 'maharashtra_finetuned_heatmap_new.png',
+        'MLP v3 SAR-based Prediction (Fine-Tuned from Gujarat)  |  '
         'Sentinel-1 100m Hub-Height'
     )
 

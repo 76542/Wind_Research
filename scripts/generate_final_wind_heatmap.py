@@ -125,6 +125,7 @@ def interp(df_pt):
     vals = df_pt["pct"].values.astype(float)
     grid = griddata(pts, vals, (gi_lon, gi_lat), method="linear")
     grid.ravel()[too_far] = np.nan
+    grid = np.clip(grid, 0, 100)
     return grid
 
 print("Interpolating (strictly within sampling point hull)...")
@@ -217,6 +218,7 @@ fig.suptitle(
 )
 
 plt.tight_layout(rect=[0, 0, 1, 0.97])
+fig.subplots_adjust(top=1.00)
 plt.savefig(OUT_PATH, dpi=180, bbox_inches="tight", facecolor="white")
 plt.close()
 print(f"\n✅ Saved → {OUT_PATH}")

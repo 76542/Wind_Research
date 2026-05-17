@@ -262,7 +262,7 @@ def main():
             grid_z = griddata(points, values, (grid_lon2d, grid_lat2d),
                               method='linear')
             grid_z[combined_mask] = np.nan
-            grid_z = np.clip(grid_z, 0, None)
+            grid_z = np.clip(grid_z, 0, 100)
 
             if HAS_CARTOPY:
                 im = ax.pcolormesh(grid_lon, grid_lat, grid_z, cmap='jet',
@@ -322,6 +322,7 @@ def main():
             f'{subtitle}',
             fontsize=15, fontweight='bold', y=1.01)
         plt.tight_layout()
+        fig.subplots_adjust(top=1.15)
         path = os.path.join(OUTPUT_DIR, filename)
         plt.savefig(path, dpi=180, bbox_inches='tight')
         plt.close()

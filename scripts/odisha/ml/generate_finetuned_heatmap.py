@@ -205,7 +205,7 @@ ERA5 mean wind: {y.mean():.2f} m/s
             aug_vals = np.concatenate([values, coast_vals])
             grid_z = griddata(aug_pts, aug_vals, (grid_lon2d, grid_lat2d), method='cubic')
             grid_z[combined_mask] = np.nan
-            grid_z = np.clip(grid_z, 0, None)
+            grid_z = np.clip(grid_z, 0, 100)
 
             im = ax.pcolormesh(grid_lon, grid_lat, grid_z, cmap='jet', shading='auto')
             for seg in coast_segments:
@@ -226,8 +226,9 @@ ERA5 mean wind: {y.mean():.2f} m/s
             plt.colorbar(im, ax=ax, label='% of Observations', shrink=0.75, pad=0.02)
 
         fig.suptitle(f'Offshore Wind Resource Potential — Odisha Coast (2020-2024)\n{subtitle}',
-                     fontsize=14, fontweight='bold', y=1.02)
+                     fontsize=14, fontweight='bold', y=0.98)
         plt.tight_layout()
+        fig.subplots_adjust(top=1.00)
         path = os.path.join(OUTPUT_DIR, filename)
         plt.savefig(path, dpi=150, bbox_inches='tight'); plt.close()
         print(f"Saved: {path}")

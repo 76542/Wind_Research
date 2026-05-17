@@ -219,7 +219,7 @@ def main():
             grid_z = griddata(points, values, (grid_lon2d, grid_lat2d),
                               method='linear')
             grid_z[dist_mask] = np.nan
-            grid_z = np.clip(grid_z, 0, None)
+            grid_z = np.clip(grid_z, 0, 100)
 
             if HAS_CARTOPY:
                 im = ax.pcolormesh(grid_lon, grid_lat, grid_z, cmap='jet',
@@ -278,6 +278,7 @@ def main():
             f'{subtitle}',
             fontsize=15, fontweight='bold', y=1.01)
         plt.tight_layout()
+        fig.subplots_adjust(top=1.20)
         path = os.path.join(OUTPUT_DIR, filename)
         plt.savefig(path, dpi=200, bbox_inches='tight', facecolor='white')
         plt.close()
@@ -291,7 +292,7 @@ def main():
         'MLP v3 (SAR)', 'new_full_coastline_model_heatmap.png',
         'MLP v3 SAR-based Prediction  |  Sentinel-1 100m Hub-Height\n'
         'West: Gujarat + Maharashtra + Goa + Karnataka + Kerala  |  '
-        'East: Tamil Nadu + AP + Odisha')
+        'East: Tamil Nadu + Andhra Pradesh + Odisha')
 
     make_map(
         [('pct_gt4_era5', '> 4 m/s'), ('pct_gt6_era5', '> 6 m/s'),
