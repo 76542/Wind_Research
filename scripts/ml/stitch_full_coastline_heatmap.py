@@ -46,6 +46,11 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 GJ_SCALER = os.path.join(PROJECT_ROOT, "models", "feature_scaler.pkl")
 
+# Air density for Wind Power Density (real Indian coastal mean; Patel et al. 2022)
+RHO = 1.16
+# Shared colour scale across the whole coastline (max WPD ~295 W/m², Tamil Nadu)
+VMAX = 300
+
 # ── All 8 states ─────────────────────────────────────────────────
 STATES = {
     # West coast
@@ -166,19 +171,13 @@ def main():
         df_raw['best_pred'] = np.clip(pred, 0, None)
 
         pp = df_raw.groupby(['point_id', 'latitude', 'longitude']).agg(
-            pct_gt4=('best_pred', lambda x: (x > 4).mean() * 100),
-            pct_gt6=('best_pred', lambda x: (x > 6).mean() * 100),
-            pct_gt8=('best_pred', lambda x: (x > 8).mean() * 100),
-            pct_gt4_era5=(TARGET, lambda x: (x > 4).mean() * 100),
-            pct_gt6_era5=(TARGET, lambda x: (x > 6).mean() * 100),
-            pct_gt8_era5=(TARGET, lambda x: (x > 8).mean() * 100),
+            wpd=('best_pred', lambda x: 0.5 * RHO * np.mean(np.clip(x.values.astype(float), 0, None) ** 3)),
         ).reset_index()
         pp['state'] = state_name
         pp['coast'] = cfg['coast']
 
-        print(f"  {len(pp)} points | %>4: {pp.pct_gt4.mean():.1f}% avg | "
-              f"%>6: {pp.pct_gt6.mean():.1f}% avg | "
-              f"%>8: {pp.pct_gt8.mean():.1f}% avg")
+        print(f"  {len(pp)} points | WPD mean: {pp.wpd.mean():.0f} W/m^2 "
+              f"(min {pp.wpd.min():.0f}, max {pp.wpd.max():.0f})")
         all_per_point.append(pp)
 
     # ── Combine ───────────────────────────────────────────────────
@@ -206,24 +205,25 @@ def main():
     def make_map(cols, title_prefix, filename, subtitle):
         if HAS_CARTOPY:
             proj = ccrs.PlateCarree()
-            fig, axes = plt.subplots(1, 3, figsize=(30, 14),
+            fig, axes = plt.subplots(1, 1, figsize=(13, 11),
                                      subplot_kw={"projection": proj})
         else:
-            fig, axes = plt.subplots(1, 3, figsize=(30, 14))
+            fig, axes = plt.subplots(1, 1, figsize=(13, 11))
 
         fig.patch.set_facecolor("white")
 
+        axes = np.atleast_1d(axes)
         for ax, (col, label) in zip(axes, cols):
             values = combined[col].values
 
             grid_z = griddata(points, values, (grid_lon2d, grid_lat2d),
                               method='linear')
             grid_z[dist_mask] = np.nan
-            grid_z = np.clip(grid_z, 0, 100)
+            grid_z = np.clip(grid_z, 0, None)
 
             if HAS_CARTOPY:
                 im = ax.pcolormesh(grid_lon, grid_lat, grid_z, cmap='jet',
-                                    shading='auto', transform=proj, zorder=1)
+                                    shading='auto', transform=proj, zorder=1, vmin=0, vmax=VMAX)
                 ax.add_feature(cfeature.LAND.with_scale("10m"),
                                facecolor="#cccccc", edgecolor="black",
                                linewidth=0.5, zorder=2)
@@ -241,7 +241,7 @@ def main():
                 gl.ylabel_style = {"color": "black", "size": 8}
             else:
                 im = ax.pcolormesh(grid_lon, grid_lat, grid_z, cmap='jet',
-                                    shading='auto')
+                                    shading='auto', vmin=0, vmax=VMAX)
                 ax.set_xlim(66.5, 89.0)
                 ax.set_ylim(7.5, 25.0)
 
@@ -270,15 +270,15 @@ def main():
                         alpha=0.5, fontstyle='italic',
                         ha='center', va='center')
 
-            plt.colorbar(im, ax=ax, label='% of Observations', shrink=0.5,
+            plt.colorbar(im, ax=ax, label='Wind Power Density (W/m²)', shrink=0.5,
                          pad=0.02)
 
         fig.suptitle(
-            f'Offshore Wind Resource Potential — Indian Coastline (2020-2024)\n'
+            f'Offshore Wind Power Density — Indian Coastline (2020-2024)\n'
             f'{subtitle}',
-            fontsize=15, fontweight='bold', y=1.01)
+            fontsize=15, fontweight='bold', y=0.98)
         plt.tight_layout()
-        fig.subplots_adjust(top=1.20)
+        fig.subplots_adjust(top=0.90)
         path = os.path.join(OUTPUT_DIR, filename)
         plt.savefig(path, dpi=200, bbox_inches='tight', facecolor='white')
         plt.close()
@@ -287,18 +287,11 @@ def main():
     print("\nGenerating full coastline heatmaps...")
 
     make_map(
-        [('pct_gt4', '> 4 m/s'), ('pct_gt6', '> 6 m/s'),
-         ('pct_gt8', '> 8 m/s')],
-        'MLP v3 (SAR)', 'new_full_coastline_model_heatmap.png',
-        'MLP v3 SAR-based Prediction  |  Sentinel-1 100m Hub-Height\n'
+        [('wpd', 'WPD (W/m²)')],
+        'MLP v3 (SAR)', 'full_coastline_wpd_heatmap.png',
+        'MLP v3 SAR-based Prediction  |  Sentinel-1 100m Hub-Height   (ρ = 1.16 kg/m³)\n'
         'West: Gujarat + Maharashtra + Goa + Karnataka + Kerala  |  '
         'East: Tamil Nadu + Andhra Pradesh + Odisha')
-
-    make_map(
-        [('pct_gt4_era5', '> 4 m/s'), ('pct_gt6_era5', '> 6 m/s'),
-         ('pct_gt8_era5', '> 8 m/s')],
-        'ERA5 (Truth)', 'new_full_coastline_era5_heatmap.png',
-        'ERA5 100m Hub-Height Wind Speed (Ground Truth Reference)')
 
     # ── Summary ───────────────────────────────────────────────────
     summary_path = os.path.join(OUTPUT_DIR, "full_coastline_summary.txt")
@@ -321,8 +314,8 @@ Per-state breakdown:
         f.write(header)
         print(header)
 
-        fmt = "{:<20} {:>5} {:>6} {:>8} {:>8} {:>8}  {:>16}"
-        hdr = fmt.format("State", "Coast", "Pts", ">4 %", ">6 %", ">8 %", "Model")
+        fmt = "{:<20} {:>5} {:>6} {:>9} {:>8} {:>8}  {:>16}"
+        hdr = fmt.format("State", "Coast", "Pts", "WPD mean", "WPD min", "WPD max", "Model")
         f.write(hdr + "\n")
         print(hdr)
         f.write("-" * 80 + "\n")
@@ -334,8 +327,8 @@ Per-state breakdown:
             s = combined[combined.state == state]
             coast = STATES[state]['coast'][0].upper()
             row = fmt.format(state, coast, len(s),
-                f"{s.pct_gt4.mean():.1f}", f"{s.pct_gt6.mean():.1f}",
-                f"{s.pct_gt8.mean():.1f}", STATES[state]['model_label'])
+                f"{s.wpd.mean():.0f}", f"{s.wpd.min():.0f}",
+                f"{s.wpd.max():.0f}", STATES[state]['model_label'])
             f.write(row + "\n")
             print(row)
 

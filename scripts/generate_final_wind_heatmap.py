@@ -23,8 +23,13 @@ BASE        = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_CSV    = os.path.join(BASE, "data", "processed", "era5_collocated.csv")
 SCALER_PATH = os.path.join(BASE, "models", "feature_scaler.pkl")
 MODEL_PATH  = os.path.join(BASE, "models", "mlp_v3_wind_model.pth")
-OUT_PATH    = os.path.join(BASE, "outputs", "gujarat_final_wind_heatmap_new.png")
+OUT_PATH    = os.path.join(BASE, "outputs", "gujarat_wpd_heatmap.png")
 os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
+
+# ── Air density for Wind Power Density ────────────────────────────────────────
+# 1.16 kg/m^3 = realistic mean air density for the warm Indian coast
+# (Patel et al. 2022, Ocean Engineering). Standard 1.225 overestimates WPD ~5-7.5%.
+RHO = 1.16
 
 # ── Exact feature list from config_ml.py ──────────────────────────────────────
 ALL_FEATURES = [
@@ -65,13 +70,17 @@ df["cos_doy"]   = np.cos(2 * np.pi * df["day_of_year"] / 365)
 df = df.dropna(subset=ALL_FEATURES + [TARGET, "point_id"])
 print(f"  {len(df)} rows, {df['point_id'].nunique()} unique points")
 
-# ── ERA5 counts per point ──────────────────────────────────────────────────────
-print("Computing ERA5 wind potential...")
+# ── Wind Power Density per point ──────────────────────────────────────────────
+# WPD = 0.5 * rho * mean(v^3)   [W/m^2]
+# Cube every observation's wind speed, then average. (NOT cube of the mean.)
+print("Computing wind power density...")
 meta = df.groupby("point_id")[["latitude","longitude"]].first().reset_index()
 
-def count_pct(df, col, thresh):
-    grp = df.groupby("point_id")[col].apply(lambda x: (x > thresh).mean() * 100)
-    return grp.reset_index().rename(columns={col: "pct"}).merge(meta, on="point_id")
+def wpd_per_point(df, col):
+    grp = df.groupby("point_id")[col].apply(
+        lambda v: 0.5 * RHO * np.mean(np.power(v.values.astype(float), 3))
+    )
+    return grp.reset_index().rename(columns={col: "wpd"}).merge(meta, on="point_id")
 
 
 # ── Load saved scaler & model ──────────────────────────────────────────────────
@@ -87,7 +96,7 @@ model.load_state_dict(state["model_state_dict"] if "model_state_dict" in state e
 model.eval()
 
 print("Running inference...")
-X   = scaler.transform(df[ALL_FEATURES].values)
+X   = scaler.transform(df[ALL_FEATURES])
 X_t = torch.tensor(X, dtype=torch.float32)
 preds = []
 with torch.no_grad():
@@ -95,12 +104,9 @@ with torch.no_grad():
         preds.append(model(X_t[i:i+4096]).numpy())
 df["mlp_pred"] = np.clip(np.concatenate(preds), 0, None)
 
-mlp_6 = count_pct(df, "mlp_pred", 6)
-mlp_8 = count_pct(df, "mlp_pred", 8)
-mlp_4 = count_pct(df, "mlp_pred", 4)
-print(f"  MLP >4 m/s: max={mlp_4['pct'].max():.1f}%, mean={mlp_4['pct'].mean():.1f}%")
-print(f"  MLP >6 m/s: max={mlp_6['pct'].max():.1f}%, mean={mlp_6['pct'].mean():.1f}%")
-print(f"  MLP >8 m/s: max={mlp_8['pct'].max():.1f}%, mean={mlp_8['pct'].mean():.1f}%")
+# WPD per point (MLP only)
+mlp_wpd  = wpd_per_point(df, "mlp_pred")
+print(f"  MLP WPD: min={mlp_wpd['wpd'].min():.0f}, max={mlp_wpd['wpd'].max():.0f}, mean={mlp_wpd['wpd'].mean():.0f} W/m^2")
 
 # ── Interpolation — masked strictly to convex hull of actual points ────────────
 lat_min, lat_max = 19.3, 24.8
@@ -122,17 +128,18 @@ too_far   = dists > 0.25
 
 def interp(df_pt):
     pts  = df_pt[["longitude","latitude"]].values
-    vals = df_pt["pct"].values.astype(float)
+    vals = df_pt["wpd"].values.astype(float)
     grid = griddata(pts, vals, (gi_lon, gi_lat), method="linear")
     grid.ravel()[too_far] = np.nan
-    grid = np.clip(grid, 0, 100)
+    grid = np.clip(grid, 0, None)   # WPD is unbounded above; only floor at 0
     return grid
 
 print("Interpolating (strictly within sampling point hull)...")
 
-g_mlp_4 = interp(mlp_4)
-g_mlp_6  = interp(mlp_6)
-g_mlp_8  = interp(mlp_8)
+g_mlp  = interp(mlp_wpd)
+
+# Shared colour scale
+VMAX = float(np.nanmax(mlp_wpd["wpd"].max()))
 
 # ── Plot ──────────────────────────────────────────────────────────────────────
 print("Plotting...")
@@ -140,21 +147,19 @@ cmap = plt.cm.jet
 
 if HAS_CARTOPY:
     proj = ccrs.PlateCarree()
-    fig, axes = plt.subplots(1, 3, figsize=(22, 7),
+    fig, ax = plt.subplots(1, 1, figsize=(8, 8),
                          subplot_kw={"projection": proj})
 else:
-    fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+    fig, ax = plt.subplots(1, 1, figsize=(8, 8))
 
 fig.patch.set_facecolor("white")
 
 panels = [
-    (0, 0, "MLP v3 (SAR)", "> 4 m/s", g_mlp_4, mlp_4, mlp_4["pct"].max()),
-    (0, 1, "MLP v3 (SAR)", "> 6 m/s", g_mlp_6, mlp_6, mlp_6["pct"].max()),
-    (0, 2, "MLP v3 (SAR)", "> 8 m/s", g_mlp_8, mlp_8, mlp_8["pct"].max()),
+    ("MLP v3 (SAR)", g_mlp, mlp_wpd),
 ]
 
-for row, col, src_label, thresh_label, grid, pts_df, vmax in panels:
-    ax = axes[col]
+for src_label, grid, pts_df in panels:
+    vmax = VMAX
 
     if HAS_CARTOPY:
         im = ax.pcolormesh(gi_lon, gi_lat, grid, cmap=cmap,
@@ -176,13 +181,13 @@ for row, col, src_label, thresh_label, grid, pts_df, vmax in panels:
         gl.xlabel_style = {"color": "black", "size": 8}
         gl.ylabel_style = {"color": "black", "size": 8}
         ax.scatter(pts_df["longitude"], pts_df["latitude"],
-                   c=pts_df["pct"], cmap=cmap, vmin=0, vmax=vmax,
+                   c=pts_df["wpd"], cmap=cmap, vmin=0, vmax=vmax,
                    s=8, edgecolors="none", zorder=5, transform=proj)
     else:
         im = ax.pcolormesh(gi_lon, gi_lat, grid, cmap=cmap,
                            vmin=0, vmax=vmax, shading="auto", zorder=1)
         ax.scatter(pts_df["longitude"], pts_df["latitude"],
-                   c=pts_df["pct"], cmap=cmap, vmin=0, vmax=vmax,
+                   c=pts_df["wpd"], cmap=cmap, vmin=0, vmax=vmax,
                    s=8, edgecolors="none", zorder=5)
         ax.set_xlim(lon_min, lon_max)
         ax.set_ylim(lat_min, lat_max)
@@ -193,16 +198,16 @@ for row, col, src_label, thresh_label, grid, pts_df, vmax in panels:
             sp.set_edgecolor("black")
 
     cb = fig.colorbar(im, ax=ax, fraction=0.038, pad=0.02)
-    cb.set_label("% of Observations", color="black", fontsize=9)
+    cb.set_label("Wind Power Density (W/m²)", color="black", fontsize=9)
     cb.ax.yaxis.set_tick_params(color="black")
     plt.setp(cb.ax.yaxis.get_ticklabels(), color="black", fontsize=8)
 
     ax.set_facecolor("white")
-    ax.set_title(f"{src_label}  |  {thresh_label}",
+    ax.set_title(f"{src_label}  |  Wind Power Density",
                  color="black", fontsize=11, pad=7, fontweight="bold")
 
-    ax.text(0.03, 0.95, thresh_label, transform=ax.transAxes,
-            fontsize=13, fontweight="bold", color="black", va="top",
+    ax.text(0.03, 0.95, "WPD (W/m²)", transform=ax.transAxes,
+            fontsize=12, fontweight="bold", color="black", va="top",
             bbox=dict(facecolor="white", edgecolor="black",
                       alpha=0.75, boxstyle="round,pad=0.3"))
 
@@ -212,8 +217,8 @@ for row, col, src_label, thresh_label, grid, pts_df, vmax in panels:
                       alpha=0.6, boxstyle="round,pad=0.25"))
 
 fig.suptitle(
-    "Offshore Wind Resource Potential — Gujarat Coast  (2020–2024)\n"
-    "MLP v3 SAR-based Prediction  |  Sentinel-1 100m Hub-Height",
+    "Offshore Wind Power Density — Gujarat Coast  (2020–2024)\n"
+    "MLP v3 SAR-based Prediction  |  Sentinel-1 100m Hub-Height   (ρ = 1.16 kg/m³)",
     color="black", fontsize=13, fontweight="bold", y=1.01
 )
 

@@ -38,6 +38,9 @@ PREDICTIONS = os.path.join(PROJECT_ROOT, "data", "processed", "karnataka",
                             "karnataka_predictions.csv")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+# Air density for Wind Power Density (real Indian coastal mean; Patel et al. 2022)
+RHO = 1.16
+
 
 def compute_metrics(y_true, y_pred):
     r = y_pred - y_true
@@ -182,13 +185,10 @@ ERA5 mean wind: {y.mean():.2f} m/s
     pred_col = "ka_pred"
 
     pp = df_raw.groupby(['point_id','latitude','longitude']).agg(
-        pct_gt4=(pred_col, lambda x: (x>4).mean() * 100),
-        pct_gt6=(pred_col, lambda x: (x>6).mean() * 100),
-        pct_gt8=(pred_col, lambda x: (x>8).mean() * 100),
-        pct_gt4_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x>4).mean() * 100),
-        pct_gt6_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x>6).mean() * 100),
-        pct_gt8_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x>8).mean() * 100),
+        wpd=(pred_col, lambda x: 0.5 * RHO * np.mean(np.clip(x.values.astype(float), 0, None) ** 3)),
     ).reset_index()
+    print(f"  Karnataka WPD: min={pp['wpd'].min():.0f}, "
+          f"max={pp['wpd'].max():.0f}, mean={pp['wpd'].mean():.0f} W/m^2")
 
     points = pp[['longitude','latitude']].values
 
@@ -216,7 +216,8 @@ ERA5 mean wind: {y.mean():.2f} m/s
     _, coast_nn_idx = tree.query(coast_sub)
 
     def make_map(cols, prefix, fname, subtitle):
-        fig, axes = plt.subplots(1, 3, figsize=(20, 8))
+        fig, axes = plt.subplots(1, len(cols), figsize=(8, 9))
+        axes = np.atleast_1d(axes)
         for ax, (col, label) in zip(axes, cols):
             values = pp[col].values
             # Augment data points with coastal anchors
@@ -225,7 +226,7 @@ ERA5 mean wind: {y.mean():.2f} m/s
             aug_vals = np.concatenate([values, coast_vals])
             gz = griddata(aug_pts, aug_vals, (glon2d, glat2d), method='cubic')
             gz[combined] = np.nan
-            gz = np.clip(gz, 0, 100)
+            gz = np.clip(gz, 0, None)
             im = ax.pcolormesh(glon, glat, gz, cmap='jet', shading='auto')
             for seg in coast_segs:
                 lons, lats = zip(*seg)
@@ -241,8 +242,8 @@ ERA5 mean wind: {y.mean():.2f} m/s
             ax.text(0.97, 0.02, f'{prefix}', transform=ax.transAxes,
                     fontsize=8, ha='right', va='bottom', alpha=0.4,
                     bbox=dict(boxstyle='round', fc='white', alpha=0.5))
-            plt.colorbar(im, ax=ax, label='% of Observations', shrink=0.75)
-        fig.suptitle(f'Offshore Wind Resource Potential — Karnataka Coast (2020-2024)\n{subtitle}',
+            plt.colorbar(im, ax=ax, label='Wind Power Density (W/m²)', shrink=0.75)
+        fig.suptitle(f'Offshore Wind Power Density — Karnataka Coast (2020-2024)\n{subtitle}',
                      fontsize=14, fontweight='bold', y=1.02)
         plt.tight_layout()
         fig.subplots_adjust(top=1.00)
@@ -250,14 +251,11 @@ ERA5 mean wind: {y.mean():.2f} m/s
         plt.savefig(path, dpi=150, bbox_inches='tight'); plt.close()
         print(f"Saved: {path}")
 
-    make_map([('pct_gt4','> 4 m/s'),('pct_gt6','> 6 m/s'),('pct_gt8','> 8 m/s')],
-             'MLP v3 (Karnataka FT)', 'new_karnataka_finetuned_heatmap.png',
-             'MLP v3 SAR-based Prediction (Fine-Tuned from Maharashtra FT)  |  Sentinel-1 100m Hub-Height')
-    make_map([('pct_gt4_era5','> 4 m/s'),('pct_gt6_era5','> 6 m/s'),('pct_gt8_era5','> 8 m/s')],
-             'ERA5 (Truth)', 'new_karnataka_era5_heatmap.png',
-             'ERA5 100m Hub-Height Wind Speed (Ground Truth Reference)')
+    make_map([('wpd','WPD (W/m²)')],
+             'MLP v3 (Karnataka FT)', 'karnataka_wpd_heatmap.png',
+             'MLP v3 SAR-based Prediction (Fine-Tuned from Maharashtra FT)  |  Sentinel-1 100m Hub-Height   (ρ = 1.16 kg/m³)')
 
-    print(f"\n{'='*60}\nKARNATAKA FINE-TUNED HEATMAPS COMPLETE\n{'='*60}")
+    print(f"\n{'='*60}\nKARNATAKA WPD HEATMAP COMPLETE\n{'='*60}")
 
 
 if __name__ == "__main__":

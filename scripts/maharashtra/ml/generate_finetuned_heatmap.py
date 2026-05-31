@@ -47,6 +47,9 @@ COAST_PATH = os.path.join(PROJECT_ROOT, "data", "raw", "maharashtra",
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, "outputs", "maharashtra")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+# Air density for Wind Power Density (real Indian coastal mean; Patel et al. 2022)
+RHO = 1.16
+
 
 def load_coastline():
     """Load coastline and return segments + a lat-sorted array for masking."""
@@ -181,18 +184,12 @@ def main():
     print(f"  Zero-shot range: [{zs_pred.min():.2f}, {zs_pred.max():.2f}] m/s")
     print(f"  Fine-tuned range: [{ft_pred.min():.2f}, {ft_pred.max():.2f}] m/s")
 
-    # ── Per-point threshold stats ─────────────────────────────────────
+    # ── Per-point Wind Power Density ──────────────────────────────────
     per_point = df_raw.groupby(['point_id', 'latitude', 'longitude']).agg(
-        pct_gt4_zs=('zs_pred', lambda x: (x > 4).mean() * 100),
-        pct_gt6_zs=('zs_pred', lambda x: (x > 6).mean() * 100),
-        pct_gt8_zs=('zs_pred', lambda x: (x > 8).mean() * 100),
-        pct_gt4_ft=('ft_pred', lambda x: (x > 4).mean() * 100),
-        pct_gt6_ft=('ft_pred', lambda x: (x > 6).mean() * 100),
-        pct_gt8_ft=('ft_pred', lambda x: (x > 8).mean() * 100),
-        pct_gt4_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x > 4).mean() * 100),
-        pct_gt6_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x > 6).mean() * 100),
-        pct_gt8_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x > 8).mean() * 100),
+        wpd_ft=('ft_pred', lambda x: 0.5 * RHO * np.mean(np.clip(x.values.astype(float), 0, None) ** 3)),
     ).reset_index()
+    print(f"  Maharashtra WPD: min={per_point['wpd_ft'].min():.0f}, "
+          f"max={per_point['wpd_ft'].max():.0f}, mean={per_point['wpd_ft'].mean():.0f} W/m^2")
 
     points = per_point[['longitude', 'latitude']].values
 
@@ -219,14 +216,15 @@ def main():
 
     # ── Plot function ─────────────────────────────────────────────────
     def make_map(cols, title_prefix, filename, subtitle):
-        fig, axes = plt.subplots(1, 3, figsize=(20, 8))
+        fig, axes = plt.subplots(1, len(cols), figsize=(8, 9))
+        axes = np.atleast_1d(axes)
 
         for ax, (col, label) in zip(axes, cols):
             values = per_point[col].values
             grid_z = griddata(points, values, (grid_lon2d, grid_lat2d),
                               method='cubic')
             grid_z[combined_mask] = np.nan
-            grid_z = np.clip(grid_z, 0, 100)
+            grid_z = np.clip(grid_z, 0, None)
 
             im = ax.pcolormesh(grid_lon, grid_lat, grid_z, cmap='jet',
                                 shading='auto')
@@ -254,11 +252,11 @@ def main():
                     fontsize=8, ha='right', va='bottom', alpha=0.4,
                     bbox=dict(boxstyle='round', facecolor='white', alpha=0.5))
 
-            plt.colorbar(im, ax=ax, label='% of Observations', shrink=0.75,
+            plt.colorbar(im, ax=ax, label='Wind Power Density (W/m²)', shrink=0.75,
                          pad=0.02)
 
         fig.suptitle(
-            f'Offshore Wind Resource Potential — Maharashtra Coast (2020-2024)\n'
+            f'Offshore Wind Power Density — Maharashtra Coast (2020-2024)\n'
             f'{subtitle}',
             fontsize=14, fontweight='bold', y=1.02)
         plt.tight_layout()
@@ -267,33 +265,17 @@ def main():
         plt.close()
         print(f"Saved: {path}")
 
-    # ── Generate all three maps ───────────────────────────────────────
-    print("\nGenerating heatmaps...")
+    # ── Generate WPD map (fine-tuned model) ───────────────────────────
+    print("\nGenerating heatmap...")
 
     make_map(
-        [('pct_gt4_zs', '> 4 m/s'), ('pct_gt6_zs', '> 6 m/s'),
-         ('pct_gt8_zs', '> 8 m/s')],
-        'MLP v3 (SAR)', 'maharashtra_zeroshot_heatmap_new.png',
-        'MLP v3 SAR-based Prediction (Zero-Shot Transfer)  |  '
-        'Sentinel-1 100m Hub-Height'
-    )
-
-    make_map(
-        [('pct_gt4_ft', '> 4 m/s'), ('pct_gt6_ft', '> 6 m/s'),
-         ('pct_gt8_ft', '> 8 m/s')],
-        'MLP v3 (Maharashtra FT)', 'maharashtra_finetuned_heatmap_new.png',
+        [('wpd_ft', 'WPD (W/m²)')],
+        'MLP v3 (Maharashtra FT)', 'maharashtra_wpd_heatmap.png',
         'MLP v3 SAR-based Prediction (Fine-Tuned from Gujarat)  |  '
-        'Sentinel-1 100m Hub-Height'
+        'Sentinel-1 100m Hub-Height   (ρ = 1.16 kg/m³)'
     )
 
-    make_map(
-        [('pct_gt4_era5', '> 4 m/s'), ('pct_gt6_era5', '> 6 m/s'),
-         ('pct_gt8_era5', '> 8 m/s')],
-        'ERA5 (Truth)', 'maharashtra_era5_heatmap_new.png',
-        'ERA5 100m Hub-Height Wind Speed (Ground Truth Reference)'
-    )
-
-    print("\nAll three heatmaps generated!")
+    print("\nWPD heatmap generated!")
     print(f"Output directory: {OUTPUT_DIR}")
 
 

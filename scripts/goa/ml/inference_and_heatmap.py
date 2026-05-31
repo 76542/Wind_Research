@@ -52,6 +52,9 @@ PREDICTIONS_PATH = os.path.join(PROJECT_ROOT, "data", "processed", "goa",
                                  "goa_predictions.csv")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+# Air density for Wind Power Density (real Indian coastal mean; Patel et al. 2022)
+RHO = 1.16
+
 
 def compute_metrics(y_true, y_pred):
     residuals = y_pred - y_true
@@ -245,13 +248,10 @@ Best model for Goa: {'Maharashtra FT' if mh_m['RMSE'] < gj_m['RMSE'] else 'Gujar
     print("\nGenerating heatmap...")
 
     per_point = df_raw.groupby(['point_id', 'latitude', 'longitude']).agg(
-        pct_gt4=(best_pred_col, lambda x: (x > 4).mean() * 100),
-        pct_gt6=(best_pred_col, lambda x: (x > 6).mean() * 100),
-        pct_gt8=(best_pred_col, lambda x: (x > 8).mean() * 100),
-        pct_gt4_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x > 4).mean() * 100),
-        pct_gt6_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x > 6).mean() * 100),
-        pct_gt8_era5=('ERA5_WindSpeed_100m_ms', lambda x: (x > 8).mean() * 100),
+        wpd_best=(best_pred_col, lambda x: 0.5 * RHO * np.mean(np.clip(x.values.astype(float), 0, None) ** 3)),
     ).reset_index()
+    print(f"  Goa WPD: min={per_point['wpd_best'].min():.0f}, "
+          f"max={per_point['wpd_best'].max():.0f}, mean={per_point['wpd_best'].mean():.0f} W/m^2")
 
     points = per_point[['longitude', 'latitude']].values
 
@@ -279,7 +279,8 @@ Best model for Goa: {'Maharashtra FT' if mh_m['RMSE'] < gj_m['RMSE'] else 'Gujar
     _, coast_nn_idx = tree.query(coast_sub)
 
     def make_map(cols, title_prefix, filename, subtitle):
-        fig, axes = plt.subplots(1, 3, figsize=(20, 6))
+        fig, axes = plt.subplots(1, len(cols), figsize=(8, 7))
+        axes = np.atleast_1d(axes)
         for ax, (col, label) in zip(axes, cols):
             values = per_point[col].values
             coast_vals = values[coast_nn_idx]
@@ -288,7 +289,7 @@ Best model for Goa: {'Maharashtra FT' if mh_m['RMSE'] < gj_m['RMSE'] else 'Gujar
             grid_z = griddata(aug_pts, aug_vals, (grid_lon2d, grid_lat2d),
                               method='cubic')
             grid_z[combined_mask] = np.nan
-            grid_z = np.clip(grid_z, 0, 100)
+            grid_z = np.clip(grid_z, 0, None)
             im = ax.pcolormesh(grid_lon, grid_lat, grid_z, cmap='jet',
                                 shading='auto')
             for seg in coast_segments:
@@ -307,9 +308,9 @@ Best model for Goa: {'Maharashtra FT' if mh_m['RMSE'] < gj_m['RMSE'] else 'Gujar
                     fontsize=14, fontweight='bold', verticalalignment='top',
                     bbox=dict(boxstyle='round,pad=0.3', facecolor='white',
                               edgecolor='black', alpha=0.8))
-            plt.colorbar(im, ax=ax, label='% of Observations', shrink=0.75)
+            plt.colorbar(im, ax=ax, label='Wind Power Density (W/m²)', shrink=0.75)
         fig.suptitle(
-            f'Offshore Wind Resource Potential — Goa Coast (2020-2024)\n'
+            f'Offshore Wind Power Density — Goa Coast (2020-2024)\n'
             f'{subtitle}', fontsize=14, fontweight='bold', y=1.02)
         plt.tight_layout()
         fig.subplots_adjust(top=1.00)
@@ -319,17 +320,10 @@ Best model for Goa: {'Maharashtra FT' if mh_m['RMSE'] < gj_m['RMSE'] else 'Gujar
         print(f"Saved: {path}")
 
     make_map(
-        [('pct_gt4', '> 4 m/s'), ('pct_gt6', '> 6 m/s'),
-         ('pct_gt8', '> 8 m/s')],
-        f'MLP v3 ({best_name})', 'new_goa_model_heatmap.png',
+        [('wpd_best', 'WPD (W/m²)')],
+        f'MLP v3 ({best_name})', 'goa_wpd_heatmap.png',
         f'MLP v3 SAR-based Prediction ({best_name} Transfer)  |  '
-        f'Sentinel-1 100m Hub-Height')
-
-    make_map(
-        [('pct_gt4_era5', '> 4 m/s'), ('pct_gt6_era5', '> 6 m/s'),
-         ('pct_gt8_era5', '> 8 m/s')],
-        'ERA5 (Truth)', 'new_goa_era5_heatmap.png',
-        'ERA5 100m Hub-Height Wind Speed (Ground Truth Reference)')
+        f'Sentinel-1 100m Hub-Height   (ρ = 1.16 kg/m³)')
 
     print("\n" + "=" * 60)
     print("GOA COMPLETE")

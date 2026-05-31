@@ -32,6 +32,9 @@ PREDICTIONS_PATH = os.path.join(PROJECT_ROOT, "data", "processed", "odisha",
                                  "odisha_predictions.csv")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+# Air density for Wind Power Density (real Indian coastal mean; Patel et al. 2022)
+RHO = 1.16
+
 
 def compute_metrics(y_true, y_pred):
     r = y_pred - y_true
@@ -169,13 +172,10 @@ ERA5 mean wind: {y.mean():.2f} m/s
     # ── Heatmap ───────────────────────────────────────────────────
     print("\nGenerating heatmaps...")
     per_point = df_raw.groupby(['point_id', 'latitude', 'longitude']).agg(
-        pct_gt4_ft=('ft_pred', lambda x: (x > 4).mean() * 100),
-        pct_gt6_ft=('ft_pred', lambda x: (x > 6).mean() * 100),
-        pct_gt8_ft=('ft_pred', lambda x: (x > 8).mean() * 100),
-        pct_gt4_era5=(TARGET, lambda x: (x > 4).mean() * 100),
-        pct_gt6_era5=(TARGET, lambda x: (x > 6).mean() * 100),
-        pct_gt8_era5=(TARGET, lambda x: (x > 8).mean() * 100),
+        wpd_ft=('ft_pred', lambda x: 0.5 * RHO * np.mean(np.clip(x.values.astype(float), 0, None) ** 3)),
     ).reset_index()
+    print(f"  Odisha WPD: min={per_point['wpd_ft'].min():.0f}, "
+          f"max={per_point['wpd_ft'].max():.0f}, mean={per_point['wpd_ft'].mean():.0f} W/m^2")
 
     points = per_point[['longitude', 'latitude']].values
     grid_lon = np.linspace(84.0, 88.0, 400)
@@ -197,7 +197,8 @@ ERA5 mean wind: {y.mean():.2f} m/s
     _, coast_nn_idx = tree.query(coast_sub)
 
     def make_map(cols, title_prefix, filename, subtitle):
-        fig, axes = plt.subplots(1, 3, figsize=(20, 8))
+        fig, axes = plt.subplots(1, len(cols), figsize=(8, 9))
+        axes = np.atleast_1d(axes)
         for ax, (col, label) in zip(axes, cols):
             values = per_point[col].values
             coast_vals = values[coast_nn_idx]
@@ -205,7 +206,7 @@ ERA5 mean wind: {y.mean():.2f} m/s
             aug_vals = np.concatenate([values, coast_vals])
             grid_z = griddata(aug_pts, aug_vals, (grid_lon2d, grid_lat2d), method='cubic')
             grid_z[combined_mask] = np.nan
-            grid_z = np.clip(grid_z, 0, 100)
+            grid_z = np.clip(grid_z, 0, None)
 
             im = ax.pcolormesh(grid_lon, grid_lat, grid_z, cmap='jet', shading='auto')
             for seg in coast_segments:
@@ -223,9 +224,9 @@ ERA5 mean wind: {y.mean():.2f} m/s
             ax.text(0.97, 0.02, f'{title_prefix}', transform=ax.transAxes,
                     fontsize=8, ha='right', va='bottom', alpha=0.4,
                     bbox=dict(boxstyle='round', fc='white', alpha=0.5))
-            plt.colorbar(im, ax=ax, label='% of Observations', shrink=0.75, pad=0.02)
+            plt.colorbar(im, ax=ax, label='Wind Power Density (W/m²)', shrink=0.75, pad=0.02)
 
-        fig.suptitle(f'Offshore Wind Resource Potential — Odisha Coast (2020-2024)\n{subtitle}',
+        fig.suptitle(f'Offshore Wind Power Density — Odisha Coast (2020-2024)\n{subtitle}',
                      fontsize=14, fontweight='bold', y=0.98)
         plt.tight_layout()
         fig.subplots_adjust(top=1.00)
@@ -233,14 +234,11 @@ ERA5 mean wind: {y.mean():.2f} m/s
         plt.savefig(path, dpi=150, bbox_inches='tight'); plt.close()
         print(f"Saved: {path}")
 
-    make_map([('pct_gt4_ft', '> 4 m/s'), ('pct_gt6_ft', '> 6 m/s'), ('pct_gt8_ft', '> 8 m/s')],
-             'MLP v3 (Odisha FT)', 'new_odisha_finetuned_heatmap.png',
-             'MLP v3 SAR-based Prediction (Fine-Tuned from AP FT)  |  Sentinel-1 100m Hub-Height')
-    make_map([('pct_gt4_era5', '> 4 m/s'), ('pct_gt6_era5', '> 6 m/s'), ('pct_gt8_era5', '> 8 m/s')],
-             'ERA5 (Truth)', 'new_odisha_era5_heatmap.png',
-             'ERA5 100m Hub-Height Wind Speed (Ground Truth Reference)')
+    make_map([('wpd_ft', 'WPD (W/m²)')],
+             'MLP v3 (Odisha FT)', 'odisha_wpd_heatmap.png',
+             'MLP v3 SAR-based Prediction (Fine-Tuned from AP FT)  |  Sentinel-1 100m Hub-Height   (ρ = 1.16 kg/m³)')
 
-    print("\nAll heatmaps generated!")
+    print("\nWPD heatmap generated!")
 
 if __name__ == "__main__":
     main()
