@@ -148,12 +148,13 @@ def main():
         df_raw['best_pred'] = np.clip(pred, 0, None)
 
         pp = df_raw.groupby(['point_id', 'latitude', 'longitude']).agg(
+            mws=('best_pred', lambda x: np.mean(np.clip(x.values.astype(float), 0, None))),
             wpd=('best_pred', lambda x: 0.5 * RHO * np.mean(np.clip(x.values.astype(float), 0, None) ** 3)),
         ).reset_index()
         pp['state'] = state_name
 
-        print(f"  {len(pp)} points | WPD mean: {pp.wpd.mean():.0f} W/m^2 "
-              f"(min {pp.wpd.min():.0f}, max {pp.wpd.max():.0f})")
+        print(f"  {len(pp)} points | Mean wind: {pp.mws.mean():.1f} m/s | "
+              f"WPD mean: {pp.wpd.mean():.0f} W/m^2 (min {pp.wpd.min():.0f}, max {pp.wpd.max():.0f})")
 
         all_per_point.append(pp)
 
@@ -191,13 +192,13 @@ def main():
     def make_map(cols, title_prefix, filename, subtitle):
         if HAS_CARTOPY:
             proj = ccrs.PlateCarree()
-            fig, axes = plt.subplots(1, 1, figsize=(10, 12),
+            fig, axes = plt.subplots(1, len(cols), figsize=(10 * len(cols), 12),
                                      subplot_kw={"projection": proj})
         else:
-            fig, axes = plt.subplots(1, 1, figsize=(10, 12))
+            fig, axes = plt.subplots(1, len(cols), figsize=(10 * len(cols), 12))
 
         axes = np.atleast_1d(axes)
-        for ax, (col, label) in zip(axes, cols):
+        for ax, (col, label, cbar_label, vmax) in zip(axes, cols):
             values = combined[col].values
 
             grid_z = griddata(points, values, (grid_lon2d, grid_lat2d),
@@ -207,7 +208,7 @@ def main():
 
             if HAS_CARTOPY:
                 im = ax.pcolormesh(grid_lon, grid_lat, grid_z, cmap='jet',
-                                    shading='auto', transform=proj, zorder=1, vmin=0, vmax=VMAX)
+                                    shading='auto', transform=proj, zorder=1, vmin=0, vmax=vmax)
                 ax.add_feature(cfeature.LAND.with_scale("10m"),
                                facecolor="#cccccc", edgecolor="black",
                                linewidth=0.7, zorder=2)
@@ -225,7 +226,7 @@ def main():
                 gl.ylabel_style = {"color": "black", "size": 8}
             else:
                 im = ax.pcolormesh(grid_lon, grid_lat, grid_z, cmap='jet',
-                                    shading='auto', vmin=0, vmax=VMAX)
+                                    shading='auto', vmin=0, vmax=vmax)
                 for seg in all_coast_segments:
                     lons, lats = zip(*seg)
                     ax.plot(lons, lats, color='gray', linewidth=0.5, alpha=0.6)
@@ -253,11 +254,11 @@ def main():
                 ax.text(slon, slat, sname, fontsize=7, color='black',
                         alpha=0.5, fontstyle='italic')
 
-            plt.colorbar(im, ax=ax, label='Wind Power Density (W/m²)', shrink=0.6,
+            plt.colorbar(im, ax=ax, label=cbar_label, shrink=0.6,
                          pad=0.02)
 
         fig.suptitle(
-            f'Offshore Wind Power Density — Indian East Coast (2020-2024)\n'
+            f'Offshore Wind Resource: Mean Speed & Power Density — Indian East Coast (2020-2024)\n'
             f'{subtitle}',
             fontsize=15, fontweight='bold', y=0.98)
         plt.tight_layout()
@@ -270,9 +271,11 @@ def main():
     # ── Generate maps ─────────────────────────────────────────────
     print("\nGenerating stitched heatmaps...")
 
+    vmax_mws = float(np.ceil(combined['mws'].max()))
     make_map(
-        [('wpd', 'WPD (W/m²)')],
-        'MLP v3 (SAR)', 'east_coast_wpd_heatmap.png',
+        [('mws', 'Mean Wind (m/s)', 'Mean Wind Speed (m/s)', vmax_mws),
+         ('wpd', 'WPD (W/m²)', 'Wind Power Density (W/m²)', VMAX)],
+        'MLP v3 (SAR)', 'east_coast_meanwind_wpd_heatmap.png',
         'MLP v3 SAR-based Prediction  |  Sentinel-1 100m Hub-Height   (ρ = 1.16 kg/m³)\n'
         'Tamil Nadu (FT) + Andhra Pradesh (FT) + Odisha (FT)')
 
