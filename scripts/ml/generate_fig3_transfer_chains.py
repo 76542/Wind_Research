@@ -51,7 +51,7 @@ arrow((65.5,25),(75.5,25),-1.03,70.5,29)        # AP->OD
 ax.text(9,71,"West coast",ha="center",fontsize=12,fontweight="bold",color="#555")
 ax.text(9,29,"East coast",ha="center",fontsize=12,fontweight="bold",color="#555")
 
-fig.suptitle("Transfer Learning Chains: Zero-Shot Transfer vs Fine-Tuned Skill",
+fig.suptitle("Transfer Learning Chains: Zero-Shot Transfer vs Fine-Tuned",
     fontsize=15,fontweight="bold",color=TITLE,y=0.975)
 ax.set_title("Arrow = zero-shot R\u00b2 (parent model on child, before fine-tuning)   |   "
     "Box = test-set R\u00b2 / RMSE (m/s)",fontsize=11.5,color=TITLE,pad=12)
